@@ -1,0 +1,15 @@
+## Interface: 16001
+## Title: Pending Quest XP
+## Notes: A turn-in queue: quests that are complete leave Blizzard's tracker and land here, under a header showing whether handing them all in is enough to level.
+## Author: Tziera
+## Version: 0.1
+## X-License: GPL-3.0-or-later
+# Sacrificial first line: the beta client appears to drop whichever
+# SavedVariables directive comes first. PendingQuestXPScratchDB is never touched
+# by the code -- it exists so the real one below is not the first.
+## SavedVariables: PendingQuestXPScratchDB
+## SavedVariablesPerCharacter: PendingQuestXPDB
+
+# Interface number derived from the client's 1.60.1 -- see README.md.
+
+PendingQuestXP.lua

@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: Dungeon Level Guide
+## Notes: A movable, resizable list of the dungeons that suit your current level, within an adjustable +/- margin, with shortcuts to the map and the Group Finder.
+## Author: Tziera
+## Version: 0.2
+## X-License: GPL-3.0-or-later
+# Sacrificial first line: the beta client appears to drop whichever
+# SavedVariables directive comes first. DungeonLevelGuideScratchDB is never touched
+# by the code -- it exists so the real one below is not the first.
+## SavedVariables: DungeonLevelGuideScratchDB
+## SavedVariablesPerCharacter: DungeonLevelGuideDB
+
+# Interface number derived from the client's 1.60.1 -- see README.md.
+
+MeasuredLevels.lua
+LearnedQuests.lua
+DungeonLevelGuide.lua
