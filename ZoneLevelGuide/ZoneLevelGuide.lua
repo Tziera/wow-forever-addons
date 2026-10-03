@@ -515,6 +515,17 @@ local function PlayerClass()
     return token
 end
 
+-- `races` lists the race tokens a quest is for ("Gnome"), as UnitRace gives them.
+local function ForYourRace(q)
+    if not (q.races and UnitRace) then return true end
+    local _, token = UnitRace("player")
+    if not token then return true end
+    for race in q.races:gmatch("%S+") do
+        if race == token then return true end
+    end
+    return false
+end
+
 -- The professions you have, by name ("Tailoring"). The client's own list of
 -- professions is asked first; it does not care how the skill window is folded.
 local function ProfessionList()
@@ -1062,7 +1073,7 @@ local function QuestsIn(zoneName, window, level)
             or (q.level == nil and window[1] <= 0)
             or (q.level and q.level >= window[1] and q.level <= window[2])
         local yourClass = not (q.class and PlayerClass() and q.class ~= PlayerClass())
-        if inWindow and yourClass then
+        if inWindow and yourClass and ForYourRace(q) then
             local otherSide = q.side and mine and q.side ~= mine
             if otherSide and ZoneLevelGuideDB.hideOtherSide then
                 hidden = hidden + 1
