@@ -465,6 +465,7 @@ local DEFAULTS = {
     hideDone = false,           -- hide recorded quests you have handed in
     hideHigh = false,           -- hide quests more than QUEST_WINDOW levels above you
     hideProfession = false,     -- hide quests for a profession you do not have
+    hideChainSteps = false,     -- hide a chain's later steps until the one before is done
     chainHelp = false,          -- show chain suggestions and let the player answer them
     style = DEFAULT_STYLE,      -- one of STYLE_ORDER
     bgAlpha = 0.75,             -- 0 see-through, 1 solid
@@ -489,10 +490,12 @@ local function EnsureDB()
     -- [zone name] = true for the zones whose quest list is unfolded
     db.expanded = db.expanded or {}
     -- [questID] = { title, level, group, dungeon, zone, mapID, x, y, giver, fromItem, handIn, repeatable,
-    --               side, after, afterTitle, afterGuess, afterGuessTitle, needs, instead, leadsTo, class,
-    --               profession, itemZone, itemMapID, itemX, itemY }
+    --               side, after, afterTitle, afterGuess, afterGuessTitle, needs, needsQuest, needsQuestTitle,
+    --               instead, during, leadsTo, class,
+    --               profession, itemZone, itemMapID, itemX, itemY, turnIn, turnInZone, turnInMapID, turnInX, turnInY }
     -- item*: where the item the quest needs lies, e.g. a book; ctrl-click marks it.
-    -- after = false: the chain was taken away, and harvest removes it too.
+    -- turnIn*: where it is handed in, when the quest only hints at it; ctrl-click marks it.
+    -- after = false: the chain was taken away, and harvest removes it too. needsQuest = false likewise.
     db.quests = db.quests or {}
     -- The latest hand-ins, newest first: { id, title }
     db.turnedIn = db.turnedIn or {}
@@ -668,7 +671,25 @@ local function ZoneOfMap(mapID)
         if not ok then return nil end
     end
     if not info then return nil end
+    -- Some caves (Wailing Caverns' mouth) hang straight under the continent:
+    -- ask the continent which zone the player is standing in.
+    if info.mapType and info.mapType < ZONE_MAP_TYPE and info.mapID ~= mapID
+        and C_Map.GetMapInfoAtPosition and C_Map.GetPlayerMapPosition then
+        local okPos, pos = pcall(C_Map.GetPlayerMapPosition, info.mapID, "player")
+        local x, y
+        if okPos and pos and pos.GetXY then x, y = pos:GetXY() end
+        if x and y then
+            local okAt, at = pcall(C_Map.GetMapInfoAtPosition, info.mapID, x, y)
+            if okAt and at and at.mapType == ZONE_MAP_TYPE then info = at end
+        end
+    end
     return info.name, info.mapID or mapID
+end
+
+local function IsContinent(mapID)
+    if not (mapID and C_Map and C_Map.GetMapInfo) then return false end
+    local ok, info = pcall(C_Map.GetMapInfo, mapID)
+    return ok and info and info.mapType and info.mapType < ZONE_MAP_TYPE or false
 end
 
 local function PlayerPosition(mapID)
@@ -869,7 +890,10 @@ local function ObjectivesText(questID)
 end
 
 -- Forever's "Camping 101: Skinning" and its kin name their profession.
-local function TitleProfession(title)
+-- `profession = false` in the shipped data means it was checked: none needed.
+local function TitleProfession(title, questID)
+    local shipped = ns.RECORDED_QUESTS and ns.RECORDED_QUESTS[questID]
+    if shipped and shipped.profession == false then return nil end
     return type(title) == "string" and title:match("^Camping 101: (.+)$") or nil
 end
 
@@ -908,10 +932,13 @@ local function RecordQuest(questID)
         afterGuess = afterGuess,
         afterGuessTitle = afterGuessTitle,
         needs = annotations.needs,
+        needsQuest = annotations.needsQuest,
+        needsQuestTitle = annotations.needsQuestTitle,
         instead = annotations.instead,
+        during = annotations.during,
         leadsTo = annotations.leadsTo,
         class = annotations.class,
-        profession = annotations.profession or TitleProfession(title),
+        profession = annotations.profession or TitleProfession(title, questID),
         title = title,
         level = info and (info.difficultyLevel or info.level),
         group = info and info.suggestedGroup and info.suggestedGroup > 0 or nil,
@@ -946,8 +973,14 @@ local function AllQuests()
         local merged = {}
         for k, v in pairs(all[id] or {}) do merged[k] = v end
         for k, v in pairs(q) do merged[k] = v end
+        -- Recorded on the continent map before ZoneOfMap looked past it:
+        -- the file's place is better.
+        if all[id] and all[id].zone and IsContinent(q.mapID) then
+            merged.zone, merged.mapID, merged.x, merged.y = all[id].zone, all[id].mapID, all[id].x, all[id].y
+        end
         -- Taken in play, not just noted: Forever has shown it.
         if q.zone then merged.classic = nil end
+        if (all[id] or {}).profession == false then merged.profession = nil end
         all[id] = merged
     end
     local byZone = {}
@@ -1051,6 +1084,20 @@ local function QuestStatus(questID)
     return "open"
 end
 
+-- A breadcrumb is no longer offered once you have the quest it leads to.
+local function BreadcrumbSpent(q, id)
+    return q.leadsTo ~= nil and QuestStatus(id) == "open" and QuestStatus(q.leadsTo) ~= "open"
+end
+
+-- Never to be taken again: the other of an either-or is done, the quest it
+-- can only be done during is, or a breadcrumb's target is taken. The "hide
+-- handed in" filter counts it as done.
+local function ClosedForGood(q, id)
+    if q.instead and QuestStatus(id) ~= "done" and QuestStatus(q.instead) == "done" then return true end
+    if BreadcrumbSpent(q, id) then return true end
+    return q.during ~= nil and QuestStatus(q.during) == "done"
+end
+
 -- A book: handed straight in, and not again and again. It is found somewhere
 -- else, so its level says nothing about the zone it is handed in to.
 local function IsBook(q)
@@ -1059,7 +1106,7 @@ end
 
 -- The recorded quests for a zone, lowest level first, minus the ones the
 -- filters hide, and how many were hidden. Grey quests follow the minimap's
--- "Low Level Quests" box, as they do on the map.
+-- "Low Level Quests" box, as they do on the map, except one in your log.
 local function QuestsIn(zoneName, window, level)
     local mine = PlayerSide()
     local playerLevel = level or (UnitLevel and UnitLevel("player")) or 1
@@ -1077,11 +1124,16 @@ local function QuestsIn(zoneName, window, level)
             local otherSide = q.side and mine and q.side ~= mine
             if otherSide and ZoneLevelGuideDB.hideOtherSide then
                 hidden = hidden + 1
-            elseif ZoneLevelGuideDB.hideDone and QuestStatus(id) == "done" then
+            elseif ZoneLevelGuideDB.hideDone and (QuestStatus(id) == "done" or ClosedForGood(q, id)) then
                 hidden = hidden + 1
             elseif ZoneLevelGuideDB.hideProfession and LacksProfession(q) then
                 hidden = hidden + 1
-            elseif hideLow and q.level and QuestBucket(q.level, playerLevel) == "trivial" then
+            elseif ZoneLevelGuideDB.hideChainSteps and QuestStatus(id) == "open"
+                and ((q.after and QuestStatus(q.after) ~= "done")
+                    or (q.needsQuest and QuestStatus(q.needsQuest) ~= "done")) then
+                hidden = hidden + 1
+            elseif hideLow and q.level and QuestBucket(q.level, playerLevel) == "trivial"
+                and QuestStatus(id) ~= "active" then
                 hidden = hidden + 1
             else
                 local entry = { id = id }
@@ -1352,13 +1404,21 @@ local function OnZoneClicked(zone)
     end
 end
 
--- Ctrl-click goes to where the item the quest needs lies, when that is known.
+-- Ctrl-click goes to where the item the quest needs lies, or else to where it
+-- is handed in, when that is known.
 local function OnQuestClicked(q, toItem)
     if toItem and q.itemMapID and q.itemX and q.itemY then
         SetWaypoint(q.itemMapID, q.itemX, q.itemY)
         OpenMapAt(q.itemMapID)
         print((PREFIX .. "marked the item for %s%s (%.1f, %.1f)."):format(q.title or q.id,
             q.itemZone and (", " .. q.itemZone) or "", q.itemX, q.itemY))
+        return
+    end
+    if toItem and q.turnInMapID and q.turnInX and q.turnInY then
+        SetWaypoint(q.turnInMapID, q.turnInX, q.turnInY)
+        OpenMapAt(q.turnInMapID)
+        print((PREFIX .. "marked where %s is handed in%s (%.1f, %.1f)."):format(q.title or q.id,
+            q.turnInZone and (", " .. q.turnInZone) or "", q.turnInX, q.turnInY))
         return
     end
     if not (q.mapID and q.x and q.y) then
@@ -1381,6 +1441,8 @@ end
 -- `after` is the quest that has to be done first, `afterTitle` its name for
 -- when that quest is not recorded itself, and `needs` is free text for
 -- anything else it takes -- an item that summons the mob that drops it, say.
+-- `needsQuest` is a quest whose hand-in unlocks this one without it being the
+-- next step of a chain: one quest may open several, each its own errand.
 -- `instead` is the quest this one is an alternative to: only one of the two
 -- can be done, so doing that one closes this one.
 -- They come from the seed, from /zlg after and /zlg needs, or by hand in
@@ -1451,6 +1513,19 @@ local function SetAfter(questID, previous, title)
         q.after, q.afterTitle = previous, title or QuestTitle(previous)
     else
         q.after, q.afterTitle = false, false
+    end
+    if q.afterGuess ~= nil then q.afterGuess, q.afterGuessTitle = false, nil end
+    QuestsChanged()
+end
+
+-- `previous` nil takes it away. A guess is answered by it too: the quest
+-- offered after the hand-in was unlocked by it rather than chained to it.
+local function SetNeedsQuest(questID, previous, title)
+    local _, q = AnnotationTarget(questID)
+    if previous then
+        q.needsQuest, q.needsQuestTitle = previous, title or QuestTitle(previous)
+    else
+        q.needsQuest, q.needsQuestTitle = false, false
     end
     if q.afterGuess ~= nil then q.afterGuess, q.afterGuessTitle = false, nil end
     QuestsChanged()
@@ -1531,6 +1606,9 @@ local function ShowQuestTooltip(row, q)
     else
         GameTooltip:AddLine(("From %s, %s"):format(q.giver or "an unknown giver", where), 1, 0.82, 0)
     end
+    if q.patrols then
+        GameTooltip:AddLine(("%s patrols, so look along the way"):format(q.giver or "The giver"), 1, 0.82, 0, true)
+    end
     if q.after then
         local previous = AllQuests()[q.after]
         local previousTitle = (previous and previous.title) or q.afterTitle or ("quest " .. q.after)
@@ -1550,6 +1628,17 @@ local function ShowQuestTooltip(row, q)
         GameTooltip:AddLine(("Probably after: %s -- offered straight after you handed it in"):format(
             q.afterGuessTitle or ("quest " .. q.afterGuess)), 1, 0.5, 0.25, true)
     end
+    if q.needsQuest then
+        local previous = AllQuests()[q.needsQuest]
+        local previousTitle = (previous and previous.title) or q.needsQuestTitle or ("quest " .. q.needsQuest)
+        local done = QuestStatus(q.needsQuest) == "done"
+        GameTooltip:AddLine(("Unlocked by handing in %s%s"):format(previousTitle, done and " (done)" or ""),
+            done and 0.6 or 1, done and 0.6 or 0.5, done and 0.6 or 0.25, true)
+        if previous and not done then
+            GameTooltip:AddLine(("Get it from %s, %s"):format(previous.giver or "an unknown giver",
+                PlaceText(previous)), 1, 0.82, 0, true)
+        end
+    end
     if q.needs then
         GameTooltip:AddLine("Needs: " .. q.needs, 1, 0.5, 0.25, true)
     end
@@ -1557,11 +1646,22 @@ local function ShowQuestTooltip(row, q)
         GameTooltip:AddLine(("The item lies in %s (%.1f, %.1f) -- ctrl-click to mark it"):format(
             q.itemZone or "?", q.itemX, q.itemY), 1, 0.82, 0, true)
     end
+    if q.turnInMapID and q.turnInX and q.turnInY then
+        local action = (q.itemMapID and q.itemX and q.itemY) and "" or " -- ctrl-click to mark it"
+        GameTooltip:AddLine(("Handed in %sin %s (%.1f, %.1f)%s"):format(
+            q.turnIn and ("at " .. q.turnIn .. " ") or "", q.turnInZone or "?",
+            q.turnInX, q.turnInY, action), 1, 0.82, 0, true)
+    end
     if q.leadsTo then
         local target = AllQuests()[q.leadsTo] or {}
-        GameTooltip:AddLine(("Leads to %s: %s, %s -- which can be taken without this one"):format(
-            target.title or ("quest " .. q.leadsTo), target.giver or "unknown giver", PlaceText(target)),
-            0.6, 0.8, 1, true)
+        local targetTitle = target.title or ("quest " .. q.leadsTo)
+        if BreadcrumbSpent(q, q.id) then
+            GameTooltip:AddLine(("Not available: you already have %s, which it leads to."):format(targetTitle),
+                0.6, 0.6, 0.6, true)
+        else
+            GameTooltip:AddLine(("Leads to %s: %s, %s -- which can be taken without this one"):format(
+                targetTitle, target.giver or "unknown giver", PlaceText(target)), 0.6, 0.8, 1, true)
+        end
     end
     if q.profession then
         local lacks = LacksProfession(q)
@@ -1570,6 +1670,13 @@ local function ShowQuestTooltip(row, q)
     end
     if q.repeatable then
         GameTooltip:AddLine("Repeatable: it can be handed in again and again.", 0.6, 0.8, 1, true)
+    end
+    if q.during then
+        local other = AllQuests()[q.during]
+        local otherTitle = (other and other.title) or ("quest " .. q.during)
+        local open = QuestStatus(q.during) == "active"
+        GameTooltip:AddLine(("Only while %s is in your quest log."):format(otherTitle),
+            open and 1 or 0.6, open and 0.5 or 0.6, open and 0.25 or 0.6, true)
     end
     if q.instead then
         local other = AllQuests()[q.instead]
@@ -1587,7 +1694,7 @@ local function ShowQuestTooltip(row, q)
     GameTooltip:AddLine(STATUS_TEXT[QuestStatus(q.id)], 0.6, 0.8, 1)
     GameTooltip:AddLine("Click to mark where it is picked up.", 0.6, 0.6, 0.6)
     if IsEditor() then
-        GameTooltip:AddLine("Right-click to set which quest comes before it.", 0.6, 0.6, 0.6)
+        GameTooltip:AddLine("Right-click to set which quest comes before it or unlocks it.", 0.6, 0.6, 0.6)
     elseif HasGuess(q) then
         GameTooltip:AddLine("Right-click to confirm or turn it down.", 0.6, 0.6, 0.6)
     end
@@ -1621,6 +1728,42 @@ local RefreshList
 -- hand-in first, then the latest hand-ins, then taking the chain away.
 local MENU_WIDTH, MENU_ITEM = 380, 18
 local chainMenu
+-- "after" sets a chain, "needs" the quest that unlocks it; switched in the menu.
+local menuMode = "after"
+local OpenChainMenu
+
+-- The same hand-ins, for the quest whose hand-in unlocked this one. That can
+-- be long before it was taken, so the hour's limit does not apply.
+local function NeedsMenuEntries(q, add, named)
+    local gold, dim, white = { 1, 0.82, 0 }, { 0.6, 0.6, 0.6 }, { 0.9, 0.9, 0.9 }
+    add((q.title or ("Quest " .. q.id)) .. " is unlocked by handing in:", gold)
+    local skip = { [q.id] = true }
+    if q.needsQuest then
+        skip[q.needsQuest] = true
+        add("  " .. named(q.needsQuest, (AllQuests()[q.needsQuest] or {}).title or q.needsQuestTitle) .. " (now)", dim)
+    end
+    if q.afterGuess and not q.after and not q.needsQuest then
+        skip[q.afterGuess] = true
+        local title = q.afterGuessTitle or ("quest " .. q.afterGuess)
+        add(named(q.afterGuess, title) .. "  |cffff8040(offered after it)|r", white,
+            function() SetNeedsQuest(q.id, q.afterGuess, title) end)
+    end
+    local shown = 0
+    for _, turnIn in ipairs(ZoneLevelGuideDB.turnedIn or {}) do
+        local later = q.taken and turnIn.at and turnIn.at > q.taken
+        if not skip[turnIn.id] and not later and shown < 8 then
+            shown = shown + 1
+            add(named(turnIn.id, turnIn.title), white,
+                function() SetNeedsQuest(q.id, turnIn.id, turnIn.title) end)
+        end
+    end
+    if shown == 0 and not q.afterGuess then add("  No hand-ins saved from before you took it.", dim) end
+    if q.needsQuest then
+        add("Not unlocked by a quest", { 1, 0.5, 0.25 }, function() SetNeedsQuest(q.id, nil) end)
+    end
+    add("Back to the chain", { 0.6, 0.8, 1 }, "after")
+    add("Cancel", dim, function() end)
+end
 
 local function ChainMenuEntries(q)
     local entries = {}
@@ -1633,6 +1776,7 @@ local function ChainMenuEntries(q)
         local title = q.afterGuessTitle or ("quest " .. q.afterGuess)
         add(("Is %s part of a chain?"):format(q.title or ("quest " .. q.id)), gold)
         add(("Yes, it comes after %s"):format(title), white, function() SetAfter(q.id, q.afterGuess, title) end)
+        add(("No, but %s unlocked it"):format(title), white, function() SetNeedsQuest(q.id, q.afterGuess, title) end)
         add("Not a chain", { 1, 0.5, 0.25 }, function() DismissGuess(q.id) end)
         add("Cancel", dim, function() end)
         return entries
@@ -1641,6 +1785,11 @@ local function ChainMenuEntries(q)
     local function named(id, title)
         local giver = (AllQuests()[id] or {}).giver
         return (title or ("quest " .. id)) .. "  |cff999999#" .. id .. (giver and (" - " .. giver) or "") .. "|r"
+    end
+
+    if menuMode == "needs" then
+        NeedsMenuEntries(q, add, named)
+        return entries
     end
 
     add((q.title or ("Quest " .. q.id)) .. " comes after:", gold)
@@ -1673,11 +1822,12 @@ local function ChainMenuEntries(q)
     elseif q.afterGuess then
         add("Not a chain", { 1, 0.5, 0.25 }, function() DismissGuess(q.id) end)
     end
+    add("Needs: unlocked by a hand-in, not a chain ...", { 0.6, 0.8, 1 }, "needs")
     add("Cancel", dim, function() end)
     return entries
 end
 
-local function OpenChainMenu(row, q)
+function OpenChainMenu(row, q)
     if not chainMenu then
         chainMenu = CreateFrame("Frame", nil, UIParent)
         chainMenu:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -1712,7 +1862,10 @@ local function OpenChainMenu(row, q)
         ShowIf(item.glow, entry.onClick ~= nil)
         item:SetScript("OnClick", function()
             chainMenu:Hide()
-            if entry.onClick then
+            if type(entry.onClick) == "string" then
+                menuMode = entry.onClick
+                OpenChainMenu(row, q)
+            elseif entry.onClick then
                 entry.onClick()
                 RefreshList()
             end
@@ -1770,6 +1923,7 @@ local function GetOrCreateRow(index)
         if button == "RightButton" then
             if self.quest and (IsEditor() or HasGuess(self.quest)) then
                 GameTooltip:Hide()
+                menuMode = "after"
                 OpenChainMenu(self, self.quest)
             end
         elseif self.quest then
@@ -1865,7 +2019,9 @@ local function DrawQuestRow(row, q, level)
     end
 
     local status = QuestStatus(q.id)
-    local closed = q.instead and status ~= "done" and QuestStatus(q.instead) == "done"
+    local closed = (q.instead and status ~= "done" and QuestStatus(q.instead) == "done")
+        or (q.during and QuestStatus(q.during) ~= "active")
+        or BreadcrumbSpent(q, q.id)
     -- A quest without a level (a book hand-in, whose danger depends on where
     -- the book is found) shows no bracket rather than a question mark.
     local levelText = (q.level and tostring(q.level) or "") .. (q.group and "+" or "")
@@ -1880,7 +2036,7 @@ local function DrawQuestRow(row, q, level)
     elseif HasGuess(q) then
         tags = tags .. " |cffff8040(chain?)|r"
     end
-    if q.needs then tags = tags .. " |cff999999(needs)|r" end
+    if q.needs or q.needsQuest then tags = tags .. " |cff999999(needs)|r" end
     if q.instead then tags = tags .. " |cff999999(either)|r" end
     if q.repeatable then tags = tags .. " |cff999999(repeatable)|r" end
     if q.class then tags = tags .. (" |cff999999(%s)|r"):format(CLASS_NAME[q.class] or q.class) end
@@ -1914,6 +2070,27 @@ local function ShownZones(level)
                 window = ZoneLevelGuideDB.hideHigh and { 0, level + QUEST_WINDOW + range } or nil })
         end
     end
+
+    -- A shared starting zone the finder leaves out (Zephras Isle for a Horde
+    -- character) spans the levels of the quests recorded there.
+    local listed = {}
+    for _, zone in ipairs(finderZones) do listed[NormalName(zone.name)] = true end
+    for name, info in pairs(ZONES) do
+        if info.shared and not listed[NormalName(name)] then
+            local low, high
+            for _, q in pairs(ZoneQuests(name)) do
+                if q.level and not q.classic then
+                    low = math.min(low or q.level, q.level)
+                    high = math.max(high or q.level, q.level)
+                end
+            end
+            if low and level >= low - range and level <= high + range then
+                table.insert(shown, { name = name, minLevel = low, maxLevel = high,
+                    window = ZoneLevelGuideDB.hideHigh and { 0, level + QUEST_WINDOW + range } or nil })
+            end
+        end
+    end
+
     table.sort(shown, function(a, b)
         if a.minLevel ~= b.minLevel then return a.minLevel < b.minLevel end
         return a.name < b.name
@@ -2273,12 +2450,13 @@ local function BuildSettingsPage(page)
     Checkbox("hideDone", "Hide recorded quests you have handed in", -100)
     Checkbox("hideHigh", "Hide quests more than 5 levels above you", -126)
     Checkbox("hideProfession", "Hide quests for professions you don't have", -152)
-    Checkbox("chainHelp", "Help find quest chains: mark quests that may follow one you handed in", -178)
+    Checkbox("hideChainSteps", "Hide chain steps and unlocked quests until the quest before is done", -178)
+    Checkbox("chainHelp", "Help find quest chains: mark quests that may follow one you handed in", -204)
 
     local styleLabel = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    styleLabel:SetPoint("TOPLEFT", 14, -216)
+    styleLabel:SetPoint("TOPLEFT", 14, -242)
     styleLabel:SetText("Style")
-    page.styleDropdown = StyleDropdown(page, 58, -211, function(name)
+    page.styleDropdown = StyleDropdown(page, 58, -237, function(name)
         SetStyle(name)
         page.refresh()
     end)
@@ -2299,13 +2477,13 @@ local function BuildSettingsPage(page)
         plus:SetScript("OnClick", function() set(get() + step); page.refresh() end)
     end
 
-    Stepper("rangeLabel", -246, 1, function() return ZoneLevelGuideDB.range or DEFAULT_RANGE end, SetRange)
-    Stepper("fontLabel", -270, 1, FontSize, SetFontSize)
-    Stepper("alphaLabel", -294, 5, function() return (ZoneLevelGuideDB.bgAlpha or 0.75) * 100 end,
+    Stepper("rangeLabel", -272, 1, function() return ZoneLevelGuideDB.range or DEFAULT_RANGE end, SetRange)
+    Stepper("fontLabel", -296, 1, FontSize, SetFontSize)
+    Stepper("alphaLabel", -320, 5, function() return (ZoneLevelGuideDB.bgAlpha or 0.75) * 100 end,
         SetBackgroundAlpha)
 
     local hint = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    hint:SetPoint("TOPLEFT", 14, -326)
+    hint:SetPoint("TOPLEFT", 14, -352)
     hint:SetText("Settings are saved per character.")
 
     function page.refresh()
@@ -2447,8 +2625,10 @@ local function QuestReport()
         local known = (ns.RECORDED_QUESTS and ns.RECORDED_QUESTS[id]) or classicData[id]
         if q.zone == nil then
             -- Only a note typed in this session.
-            print(("  %d %s -- notes only%s%s"):format(id, (known and known.title) or "?",
-                q.after and (", after " .. q.after) or "", q.needs and (", needs: " .. q.needs) or ""))
+            print(("  %d %s -- notes only%s%s%s"):format(id, (known and known.title) or "?",
+                q.after and (", after " .. q.after) or "",
+                q.needsQuest and (", unlocked by " .. q.needsQuest) or "",
+                q.needs and (", needs: " .. q.needs) or ""))
         else
             local verdict = "|cff33ff33new|r"
             if known then
@@ -2491,6 +2671,12 @@ SlashCmdList["ZONELEVELGUIDE"] = function(input)
         RefreshList()
         print(PREFIX .. (ZoneLevelGuideDB.hideProfession and "hiding quests for professions you don't have."
             or "showing quests for professions you don't have, dimmed."))
+    elseif cmd == "steps" then
+        ZoneLevelGuideDB.hideChainSteps = not ZoneLevelGuideDB.hideChainSteps
+        RefreshList()
+        print(PREFIX .. (ZoneLevelGuideDB.hideChainSteps
+            and "showing only the next step of each chain."
+            or "showing every step of a chain."))
     elseif cmd == "chains" then
         ZoneLevelGuideDB.chainHelp = not ZoneLevelGuideDB.chainHelp
         RefreshList()
@@ -2558,6 +2744,7 @@ SlashCmdList["ZONELEVELGUIDE"] = function(input)
         print("  /zlg done         - show or hide recorded quests you have handed in")
         print("  /zlg high         - show or hide quests more than 5 levels above you")
         print("  /zlg profession   - show or hide quests for professions you don't have")
+        print("  /zlg steps        - show only the next step of each chain, or every step")
         print("  /zlg chains       - help find quest chains: mark quests that may follow another")
         print("  /zlg quests       - list the quests recorded this session")
         print("  /zlg after <id>   - the quest you took last comes after quest <id>")

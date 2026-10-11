@@ -47,7 +47,7 @@ to the map and the Group Finder.
 | `/dlg alpha <n>` | Background opacity, 0–100 |
 | `/dlg reset` | Put the panel back in its default position and size |
 | `/dlg lfg` | Report what the client offers of the Group Finder API |
-| `/dlg levels` | Mob levels measured this session |
+| `/dlg levels` | Mob levels measured this session (elites only; non-elites, mostly the mobs' pets, are listed apart) |
 | `/dlg copy` | Reopen the last report in a box you can copy from |
 | `/dlg layout` | Show how the panel measured its text |
 

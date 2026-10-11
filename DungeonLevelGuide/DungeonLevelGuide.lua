@@ -584,7 +584,7 @@ local DUNGEON_QUESTS = {
         { id = 2929, name = "The Grand Betrayal", faction = "A", giver = "High Tinker Mekkatorque", where = "Ironforge", x = 69, y = 49, mapID = 1455 },
     },
     ["Hall of Thanes"] = {
-        { id = 96393, name = "Old Ironforge Incursion", faction = "A", giver = "Earthseer Farsen", where = "Dun Morogh", x = 65, y = 58, mapID = 1426, note = "Needs Underground Map, from the Dark Iron Map that Dark Iron Spies drop.", chain = "A Visitor to Dun Morogh", chainID = 96408, chainGiver = "Beldin Steelgrill", chainWhere = "Dun Morogh", chainX = 50, chainY = 49, chainMapID = 1426 },
+        { id = 96393, name = "Old Ironforge Incursion", faction = "A", giver = "Earthseer Farsen", where = "Dun Morogh", x = 65, y = 58, mapID = 1426, note = "Needs Underground Map, from the Dark Iron Map that Dark Iron Spies drop." },
         { id = 96394, name = "The Restless Dead", faction = "A", giver = "Afadra Dunwall", where = "Ironforge", x = 36, y = 48, mapID = 1455 },
         { id = 96395, name = "An Ancient Grudge", giver = "Ghostly Attendant", inside = true },
         { id = 96403, name = "Important Heirlooms", faction = "A", giver = "Thom Filch", where = "Ironforge", x = 32, y = 44, mapID = 1455 },
@@ -770,6 +770,8 @@ local DEFAULTS = {
 -- an earlier version is missing whatever was added since -- the old
 -- `DB = DB or { ... }` left those nil. EnsureDB is also called at load, not
 -- only at ADDON_LOADED, so the table is never missing.
+local MOB_LEVELS_VERSION = 2
+
 local function EnsureDB()
     DungeonLevelGuideDB = DungeonLevelGuideDB or {}
     local db = DungeonLevelGuideDB
@@ -793,9 +795,16 @@ local function EnsureDB()
     -- [dungeonName] = true for the dungeons whose quest list is unfolded
     db.expanded = db.expanded or {}
     -- [instance name as the client gives it] = { min = ..., max = ..., at = player level }
+    -- Version 2 counts elites only; older measurements included the mobs'
+    -- non-elite pets, so they are dropped, and harvest skips them too.
+    if (db.mobLevelsVersion or 1) < MOB_LEVELS_VERSION then
+        db.mobLevels, db.looseLevels, db.mobMisses = {}, {}, {}
+        db.mobLevelsVersion = MOB_LEVELS_VERSION
+    end
     db.mobLevels = db.mobLevels or {}
     db.mobMisses = db.mobMisses or {}
     db.looseLevels = db.looseLevels or {}
+    db.normalLevels = db.normalLevels or {}
     -- [questID] = { dungeon, confirmed, title, level, giver, zone, mapID, x, y, side }
     db.learned = db.learned or {}
 end
@@ -1645,6 +1654,8 @@ local function CurrentInstanceName()
 end
 
 local IGNORED_CREATURE_TYPES = { ["Critter"] = true, ["Non-combat Pet"] = true }
+-- Dungeon trash is elite; the non-elites inside are mostly the mobs' pets.
+local ELITE_CLASSIFICATIONS = { elite = true, rareelite = true, worldboss = true }
 
 -- Inside an instance the client may hand out a unit's details as secret
 -- values, which cannot be compared or saved.
@@ -1697,7 +1708,10 @@ local function HostileMobLevel(unit)
     local level, levelWhy = ReadUnit(UnitLevel, unit)
     if levelWhy then unread.UnitLevel = levelWhy end
     if typeWhy and level == 1 then return nil, false, unread end
-    return level, loose, unread
+    local classification, classWhy = ReadUnit(function(u) return UnitClassification and UnitClassification(u) end, unit)
+    if classWhy then unread.UnitClassification = classWhy end
+    local normal = classification ~= nil and not ELITE_CLASSIFICATIONS[classification]
+    return level, loose, unread, normal
 end
 
 -- What could not be read, per instance and function: kept in SavedVariables
@@ -1735,9 +1749,13 @@ end
 local function RecordMobLevel(unit)
     local instanceName = CurrentInstanceName()
     if not instanceName or type(unit) ~= "string" then return false end
-    local level, loose, unread = HostileMobLevel(unit)
+    local level, loose, unread, normal = HostileMobLevel(unit)
     NoteMisses(instanceName, unread)
     if type(level) ~= "number" or level <= 0 then return false end
+    if normal then
+        Widened(DungeonLevelGuideDB.normalLevels, instanceName, level)
+        return false
+    end
     if loose then
         Widened(DungeonLevelGuideDB.looseLevels, instanceName, level)
         return false
@@ -1838,6 +1856,9 @@ local function MobLevelReport()
     end
     for name, seen in pairs(DungeonLevelGuideDB.looseLevels or {}) do
         table.insert(lines, ("  %s: %d-%d unchecked -- could include friendly NPCs"):format(name, seen.min, seen.max))
+    end
+    for name, seen in pairs(DungeonLevelGuideDB.normalLevels or {}) do
+        table.insert(lines, ("  %s: %d-%d non-elite, not counted -- mostly the mobs' pets"):format(name, seen.min, seen.max))
     end
 
     local harvested = {}

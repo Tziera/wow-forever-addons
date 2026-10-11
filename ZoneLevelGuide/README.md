@@ -15,7 +15,9 @@ quests that start in each zone: where, from whom, and at what level.
 - **Quests per zone.** `+` in front of a zone expands its quests. Click a
   zone to open the map on it. Click a quest to put a pin where it is picked
   up. When the quest needs an item that lies somewhere known, such as a book,
-  ctrl-click puts the pin on the item instead; the tooltip says where.
+  ctrl-click puts the pin on the item instead; the tooltip says where. The
+  same goes for quests that only hint at where they are handed in, such as
+  a treasure hunt: once the place is known, ctrl-click marks it.
 - **Quests are recorded when you take them.** The quest giver, the quest
   level, the zone, the coordinates and the faction are saved on accept. Quests
   that start from an item are marked as such. Dungeon quests get a dungeon
@@ -29,7 +31,8 @@ quests that start in each zone: where, from whom, and at what level.
   over the shipped data.
 - **Chains and requirements.** `(chain)` means another quest must be done
   first, and the tooltip follows the chain back to where it starts.
-  `(needs)` means something else is required, such as an item. `(either)`
+  `(needs)` means something else is required, such as an item, or that
+  handing in another quest unlocks it without it being a chain. `(either)`
   means only one of two quests can be done. A quest that points you on to
   another, without the other needing it, says so in its tooltip. `(repeatable)` means it
   can be handed in again and again. Class and profession quests are
@@ -38,7 +41,7 @@ quests that start in each zone: where, from whom, and at what level.
   straight after you hand in another one, it is probably the next step of a
   chain. Tick "Help find quest chains" under Options → AddOns, or type
   `/zlg chains`, and such quests are marked `(chain?)`. Right-click one to
-  answer: "Yes, it comes after …" or "Not a chain". Your answers are saved
+  answer: "Yes, it comes after …", "No, but … unlocked it" or "Not a chain". Your answers are saved
   with your recorded quests, in
   `WTF/Account/<account>/<realm>/<character>/SavedVariables/ZoneLevelGuide.lua`.
   To have them included in the next release, email that file to
@@ -47,10 +50,12 @@ quests that start in each zone: where, from whom, and at what level.
   handed in, at most five levels above yours. Grey quests count only while
   "Low-Level Quests" is ticked in the minimap's tracking menu.
 - **Filters**, all off by default: `/zlg done` hides quests you have handed
-  in (otherwise they fade), `/zlg high` hides quests more than five levels
-  above you, and `/zlg profession` hides quests for a profession you don't
-  have (otherwise they fade). If "Low-Level Quests" is unticked in the minimap's
-  tracking menu, grey quests are hidden too, just like on the map.
+  in, or can never take again (otherwise they fade), `/zlg high` hides quests more than five levels
+  above you, `/zlg profession` hides quests for a profession you don't
+  have (otherwise they fade), and `/zlg steps` shows only the next step of
+  each chain: a later step stays hidden until the one before it is handed in. If "Low-Level Quests" is unticked in the minimap's
+  tracking menu, grey quests are hidden too, just like on the map, except
+  the ones in your quest log.
 - Seven looks: `warm` (default), `flat`, `blizzard` and `minimal`, plus
   `elvui`, `details` and `pfui` to match those addons.
 - Snaps to Dungeon Level Guide and Pending Quest XP: drop one panel within a
@@ -66,6 +71,7 @@ quests that start in each zone: where, from whom, and at what level.
 | `/zlg done` | Show/hide quests you have handed in |
 | `/zlg high` | Show/hide quests more than 5 levels above you |
 | `/zlg profession` | Show/hide quests for professions you don't have |
+| `/zlg steps` | Show only the next step of each chain, or every step |
 | `/zlg chains` | Turn chain help on or off: mark quests that may follow another |
 | `/zlg quests` | List the quests recorded this session, marked new/known/news |
 | `/zlg after [id] <quest>` | Note that a quest comes after another one (without an id: the last quest taken) |
