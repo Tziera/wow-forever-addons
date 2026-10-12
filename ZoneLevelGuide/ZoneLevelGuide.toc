@@ -2,7 +2,7 @@
 ## Title: Zone Level Guide
 ## Notes: The zones that suit your level, from the Group Finder's own level ranges, with the quests you have picked up in each: where, from whom, and at what level.
 ## Author: Tziera
-## Version: 0.3.3
+## Version: 0.3.2
 ## X-License: GPL-3.0-or-later
 # Sacrificial first line: the beta client appears to drop whichever
 # SavedVariables directive comes first. ZoneLevelGuideScratchDB is never touched
