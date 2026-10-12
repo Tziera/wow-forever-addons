@@ -1438,16 +1438,21 @@ end
 -- Opening a Blizzard panel from addon code is only safe out of combat: in
 -- combat the client holds it back and opens it afterwards, still carrying the
 -- addon's taint, and Blizzard's own code then fails on the values it keeps
--- secret (the buff frame's aura timers). Then the pin is set and the map
--- left to the player.
+-- secret (the buff frame's aura timers). The Controller UI guards the map at
+-- all times (SetPreferredGamepadInteractTarget gets blocked). It has no API
+-- of its own to ask; its frames give it away: the gamepad action bar shows,
+-- and the cinematic skip button only exists there. Then the pin is set and
+-- the map left to the player.
 local function MayOpenPanels()
-    return not (InCombatLockdown and InCombatLockdown())
+    if InCombatLockdown and InCombatLockdown() then return false end
+    local bar = GamepadMainActionBarFrame
+    return not (GamepadCinematicSkipButton or (bar and bar.IsShown and bar:IsShown()))
 end
 
 local function OpenMapAt(mapID)
     if not (mapID and WorldMapFrame) then return false end
     if not MayOpenPanels() then
-        print(PREFIX .. "the map stays closed in combat -- open it yourself (M).")
+        print(PREFIX .. "the map stays closed in combat or with the Controller UI -- open it yourself.")
         return true
     end
     if not WorldMapFrame:IsShown() then
