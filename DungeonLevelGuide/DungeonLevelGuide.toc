@@ -2,7 +2,7 @@
 ## Title: Dungeon Level Guide
 ## Notes: A movable, resizable list of the dungeons that suit your current level, within an adjustable +/- margin, with shortcuts to the map and the Group Finder.
 ## Author: Tziera
-## Version: 0.3
+## Version: 0.3.1
 ## X-License: GPL-3.0-or-later
 # Sacrificial first line: the beta client appears to drop whichever
 # SavedVariables directive comes first. DungeonLevelGuideScratchDB is never touched

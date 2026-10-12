@@ -608,7 +608,7 @@ local DUNGEON_QUESTS = {
         { id = 5722, name = "Searching for the Lost Satchel", faction = "H", giver = "Rahauro", where = "Thunder Bluff", x = 70, y = 30, mapID = 1456 },
         { id = 5724, name = "Returning the Lost Satchel", faction = "H", giver = "Maur Grimtotem", chain = "Searching for the Lost Satchel", chainID = 5722, chainGiver = "Rahauro", chainWhere = "Thunder Bluff", chainX = 70, chainY = 30, chainMapID = 1456 },
         { id = 5725, name = "The Power to Destroy...", faction = "H", giver = "Varimathras", where = "Undercity", x = 56, y = 92, mapID = 1458 },
-        { id = 5728, name = "Hidden Enemies", faction = "H", giver = "Thrall", where = "Orgrimmar", x = 32, y = 38, mapID = 1454 },
+        { id = 5728, name = "Hidden Enemies", faction = "H", giver = "Thrall", where = "Orgrimmar", x = 32, y = 38, mapID = 1454, chain = "Hidden Enemies", chainID = 5726, chainGiver = "Thrall", chainWhere = "Orgrimmar", chainX = 32, chainY = 38, chainMapID = 1454 },
         { id = 5761, name = "Slaying the Beast", faction = "H", giver = "Neeru Fireblade", where = "Orgrimmar", x = 50, y = 51, mapID = 1454 },
     },
     ["Razorfen Downs"] = {
@@ -699,14 +699,12 @@ local DUNGEON_QUESTS = {
         { id = 2200, name = "Back to Uldaman", faction = "A", giver = "Talvash del Kissel", where = "Ironforge", x = 36, y = 4, mapID = 1455, chain = "The Shattered Necklace", chainID = 2198 },
     },
     ["Wailing Caverns"] = {
-        { id = 1489, name = "Hamuul Runetotem", faction = "H", giver = "Tonga Runetotem", where = "The Barrens", x = 52, y = 32, mapID = 1413, chain = "The Forgotten Pools", chainID = 870, chainGiver = "Tonga Runetotem", chainWhere = "The Barrens", chainX = 52, chainY = 32, chainMapID = 1413 },
-        { id = 1490, name = "Nara Wildmane", faction = "H", giver = "Arch Druid Hamuul Runetotem", where = "Thunder Bluff", x = 79, y = 29, mapID = 1456, chain = "The Forgotten Pools", chainID = 870, chainGiver = "Tonga Runetotem", chainWhere = "The Barrens", chainX = 52, chainY = 32, chainMapID = 1413 },
         { id = 1486, name = "Deviate Hides", giver = "Nalpak", where = "The Barrens", x = 46, y = 36, mapID = 1413 },
         { id = 959, name = "Trouble at the Docks", giver = "Crane Operator Bigglefuzz", where = "The Barrens", x = 63, y = 38, mapID = 1413 },
         { id = 962, name = "Serpentbloom", faction = "H", giver = "Apothecary Zamah", where = "Thunder Bluff", x = 23, y = 21, mapID = 1456 },
         { id = 1491, name = "Smart Drinks", giver = "Mebok Mizzyrix", where = "The Barrens", x = 62, y = 38, mapID = 1413, chain = "Raptor Horns", chainID = 865, chainGiver = "Mebok Mizzyrix", chainWhere = "The Barrens", chainX = 62, chainY = 38, chainMapID = 1413 },
         { id = 1487, name = "Deviate Eradication", giver = "Ebru", where = "The Barrens", x = 46, y = 36, mapID = 1413 },
-        { id = 914, name = "Leaders of the Fang", faction = "H", giver = "Nara Wildmane", where = "Thunder Bluff", x = 76, y = 32, mapID = 1456, chain = "The Forgotten Pools", chainID = 870, chainGiver = "Tonga Runetotem", chainWhere = "The Barrens", chainX = 52, chainY = 32, chainMapID = 1413 },
+        { id = 914, name = "Leaders of the Fang", faction = "H", giver = "Nara Wildmane", where = "Thunder Bluff", x = 76, y = 32, mapID = 1456, chain = "Hamuul Runetotem", chainID = 1489, chainGiver = "Tonga Runetotem", chainWhere = "The Barrens", chainX = 52, chainY = 32, chainMapID = 1413, note = "The steps before it, Hamuul Runetotem and Nara Wildmane, are done outside, in Thunder Bluff." },
         { id = 6981, name = "The Glowing Shard" },
         { id = 3366, name = "The Glowing Shard", inside = true, fromDrop = true },
     },
@@ -876,7 +874,16 @@ local COMPLETED_ALPHA = 0.45
 -- hand-written list always wins over both.
 -- ------------------------------------------------------------
 
+-- Tagged as dungeon quests by the game but done outside, as steps on the way
+-- to one. Never filed under a dungeon; the chain of the quest they lead to
+-- names them.
+local OUTSIDE = {
+    [1489] = true, -- Hamuul Runetotem, before Leaders of the Fang
+    [1490] = true, -- Nara Wildmane
+}
+
 local HAND_WRITTEN = {}
+for id in pairs(OUTSIDE) do HAND_WRITTEN[id] = true end
 for _, quests in pairs(DUNGEON_QUESTS) do
     for _, q in ipairs(quests) do HAND_WRITTEN[q.id] = true end
 end
@@ -1436,8 +1443,30 @@ local function SetBlizzardWaypoint(mapID, x, y)
     end)
 end
 
+-- Opening a Blizzard panel from addon code is only safe out of combat: in
+-- combat the client holds it back and opens it afterwards, still carrying the
+-- addon's taint, and Blizzard's own code then fails on the values it keeps
+-- secret (the buff frame's aura timers). The Controller UI guards its panels
+-- the same way. Then the pin is set and the map left to the player.
+local function MayOpenPanels()
+    if InCombatLockdown and InCombatLockdown() then return false end
+    if C_GamePad and C_GamePad.IsEnabled then
+        local ok, on = pcall(C_GamePad.IsEnabled)
+        if ok and on then return false end
+    end
+    return true
+end
+
+local function SayMapStaysClosed()
+    print(PREFIX .. "the map stays closed in combat or with the Controller UI -- open it yourself (M).")
+end
+
 local function OpenMapAt(mapID)
     if not WorldMapFrame then return false end
+    if not MayOpenPanels() then
+        SayMapStaysClosed()
+        return true
+    end
     if not WorldMapFrame:IsShown() then
         if ShowUIPanel then
             ShowUIPanel(WorldMapFrame)
@@ -3121,6 +3150,10 @@ local function ShowGroupFinderReport()
 end
 
 function ns.OnDungeonClicked(d)
+    if not MayOpenPanels() then
+        print(PREFIX .. "the map and the Group Finder stay closed in combat or with the Controller UI -- click again afterwards.")
+        return
+    end
     local coords = DungeonLevelGuideDB.dungeonCoords[d.name]
     if coords and coords.mapID and WorldMapFrame then
         OpenMapAt(coords.mapID)
