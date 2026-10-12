@@ -14,8 +14,12 @@ quests that start in each zone: where, from whom, and at what level.
   are hidden.
 - **Quests per zone.** `+` in front of a zone expands its quests. Click a
   zone to open the map on it. Click a quest to put a pin where it is picked
-  up. When the quest needs an item that lies somewhere known, such as a book,
-  ctrl-click puts the pin on the item instead; the tooltip says where. The
+  up. A book that is handed in somewhere else is listed in the zone where
+  the book lies, in each zone when it lies in several (`Books.lua`, by the
+  quest's title, so either side's quest finds it): click pins the book,
+  nearest first, ctrl-click the one who takes it. A book whose quest is not
+  recorded yet for your side is listed anyway, handed in to Garion Wendell
+  or Owen Thadd. The
   same goes for quests that only hint at where they are handed in, such as
   a treasure hunt: once the place is known, ctrl-click marks it.
 - **Quests are recorded when you take them.** The quest giver, the quest
@@ -37,6 +41,8 @@ quests that start in each zone: where, from whom, and at what level.
   another, without the other needing it, says so in its tooltip. `(repeatable)` means it
   can be handed in again and again. Class and profession quests are
   labelled, and profession quests fade if you lack the profession.
+  Legacy rewards, handed out at innkeepers, are marked `(legacy 15)` and
+  stay hidden until your account reaches that level on the Legacy Track.
 - **Help find quest chains** (off by default). When a quest is offered
   straight after you hand in another one, it is probably the next step of a
   chain. Tick "Help find quest chains" under Options → AddOns, or type

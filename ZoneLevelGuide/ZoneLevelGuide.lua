@@ -529,6 +529,20 @@ local function ForYourRace(q)
     return false
 end
 
+-- Forever's Legacy Track is a renown track; a legacy reward is handed out
+-- once the account's level on it reaches the reward's. Nil if unreadable.
+local LEGACY_TRACK = 2802
+local function LegacyLevel()
+    if not (C_MajorFactions and C_MajorFactions.GetCurrentRenownLevel) then return nil end
+    local ok, level = pcall(C_MajorFactions.GetCurrentRenownLevel, LEGACY_TRACK)
+    if ok and type(level) == "number" then return level end
+    return nil
+end
+
+local function ReachedLegacy(q)
+    return not q.legacy or (LegacyLevel() or 0) >= q.legacy
+end
+
 -- The professions you have, by name ("Tailoring"). The client's own list of
 -- professions is asked first; it does not care how the skill window is folded.
 local function ProfessionList()
@@ -957,6 +971,31 @@ local function RecordQuest(questID)
     return true
 end
 
+-- Where the item a quest needs lies: Books.lua's places for a book handed
+-- straight in, by its title, else the quest's own item* fields.
+local function ItemSpots(q)
+    local spots = q.handIn and ns.BOOKS and q.title and ns.BOOKS[q.title]
+    if spots then return spots end
+    if q.itemZone and q.itemMapID and q.itemX and q.itemY then
+        return { { zone = q.itemZone, mapID = q.itemMapID, x = q.itemX, y = q.itemY } }
+    end
+    return nil
+end
+
+-- Who takes a book on each side, for a book whose quest is not recorded yet.
+local LIBRARIANS = {
+    A = { giver = "Garion Wendell", zone = "Stormwind City", mapID = 1453, x = 49, y = 86.5 },
+    H = { giver = "Owen Thadd", zone = "Undercity", mapID = 1458, x = 73.4, y = 33 },
+}
+
+local function SpotsIn(q, zoneName)
+    local here, wanted = {}, NormalName(zoneName)
+    for _, spot in ipairs(ItemSpots(q) or {}) do
+        if NormalName(spot.zone) == wanted then table.insert(here, spot) end
+    end
+    return here
+end
+
 -- Classic's quests first, then the harvested ones, then this session's on
 -- top, keyed by quest ID. A harvested quest replaces Classic's whole: it is
 -- what Forever showed. This session's go on top field by field: a session
@@ -983,12 +1022,41 @@ local function AllQuests()
         if (all[id] or {}).profession == false then merged.profession = nil end
         all[id] = merged
     end
+    -- A book no quest of your side hands in yet still shows, as handed in to
+    -- your side's librarian, and the other side's quest for it does not.
+    -- The real quest takes its place once it is recorded.
+    local mine = PlayerSide()
+    local librarian = mine and LIBRARIANS[mine]
+    if librarian and ns.BOOKS then
+        local have = {}
+        for _, q in pairs(all) do
+            if q.handIn and q.title and (q.side == nil or q.side == mine) then have[q.title] = true end
+        end
+        for title in pairs(ns.BOOKS) do
+            if not have[title] then
+                all["book:" .. title] = { title = title, handIn = true, side = mine, giver = librarian.giver,
+                    zone = librarian.zone, mapID = librarian.mapID, x = librarian.x, y = librarian.y,
+                    needs = "The book of the same name", unrecorded = true }
+            end
+        end
+        for id, q in pairs(all) do
+            if q.handIn and q.side and q.side ~= mine and q.title and ns.BOOKS[q.title] then all[id] = nil end
+        end
+    end
+    -- A book is listed where it lies, in each zone it lies in, not where it
+    -- is handed in.
     local byZone = {}
+    local function add(zone, id, q)
+        local key = NormalName(zone)
+        byZone[key] = byZone[key] or {}
+        byZone[key][id] = q
+    end
     for id, q in pairs(all) do
-        if q.zone then
-            local key = NormalName(q.zone)
-            byZone[key] = byZone[key] or {}
-            byZone[key][id] = q
+        local spots = ItemSpots(q)
+        if spots then
+            for _, spot in ipairs(spots) do add(spot.zone, id, q) end
+        elseif q.zone then
+            add(q.zone, id, q)
         end
     end
     allQuests, questsByZone = all, byZone
@@ -1116,11 +1184,12 @@ local function QuestsIn(zoneName, window, level)
         -- A window (a city's row) leaves out quests far from your level, and
         -- another class's quests are never yours to take. Neither is hidden
         -- by a filter; they are just not what the row is about.
+        local questLevel = not q.legacy and q.level or nil
         local inWindow = not window
-            or (q.level == nil and window[1] <= 0)
-            or (q.level and q.level >= window[1] and q.level <= window[2])
+            or (questLevel == nil and window[1] <= 0)
+            or (questLevel and questLevel >= window[1] and questLevel <= window[2])
         local yourClass = not (q.class and PlayerClass() and q.class ~= PlayerClass())
-        if inWindow and yourClass and ForYourRace(q) then
+        if inWindow and yourClass and ForYourRace(q) and ReachedLegacy(q) then
             local otherSide = q.side and mine and q.side ~= mine
             if otherSide and ZoneLevelGuideDB.hideOtherSide then
                 hidden = hidden + 1
@@ -1138,13 +1207,14 @@ local function QuestsIn(zoneName, window, level)
             else
                 local entry = { id = id }
                 for k, v in pairs(q) do entry[k] = v end
+                entry.here = ItemSpots(q) and SpotsIn(q, zoneName) or nil
                 table.insert(out, entry)
             end
         end
     end
     table.sort(out, function(a, b)
-        -- A book goes last, level or not: it is found somewhere else and only
-        -- handed in here. So does a quest with no level.
+        -- A book goes last, level or not: it has none to sort by, nor does
+        -- a quest with no level.
         local aBook, bBook = IsBook(a), IsBook(b)
         if aBook ~= bBook then return bBook end
         local al, bl = a.level or math.huge, b.level or math.huge
@@ -1405,13 +1475,37 @@ local function OnZoneClicked(zone)
 end
 
 -- Ctrl-click goes to where the item the quest needs lies, or else to where it
--- is handed in, when that is known.
+-- is handed in, when that is known. A book is listed where it lies, so
+-- there a plain click finds the book and ctrl-click the one who takes it.
+-- Of several places in one zone, the one nearest the player when they are
+-- on that map.
+local function NearestSpot(spots)
+    if not spots or #spots == 0 then return nil end
+    local best = spots[1]
+    local mapID = C_Map and C_Map.GetBestMapForUnit and C_Map.GetBestMapForUnit("player")
+    local pos = mapID and C_Map.GetPlayerMapPosition and C_Map.GetPlayerMapPosition(mapID, "player")
+    if #spots > 1 and pos and pos.GetXY then
+        local px, py = pos:GetXY()
+        local bestDistance
+        for _, spot in ipairs(spots) do
+            if spot.mapID == mapID then
+                local dx, dy = spot.x / 100 - px, spot.y / 100 - py
+                local distance = dx * dx + dy * dy
+                if not bestDistance or distance < bestDistance then best, bestDistance = spot, distance end
+            end
+        end
+    end
+    return best
+end
+
 local function OnQuestClicked(q, toItem)
-    if toItem and q.itemMapID and q.itemX and q.itemY then
-        SetWaypoint(q.itemMapID, q.itemX, q.itemY)
-        OpenMapAt(q.itemMapID)
+    local spot = NearestSpot(q.here) or NearestSpot(ItemSpots(q))
+    if spot then toItem = not toItem end
+    if toItem and spot then
+        SetWaypoint(spot.mapID, spot.x, spot.y)
+        OpenMapAt(spot.mapID)
         print((PREFIX .. "marked the item for %s%s (%.1f, %.1f)."):format(q.title or q.id,
-            q.itemZone and (", " .. q.itemZone) or "", q.itemX, q.itemY))
+            spot.zone and (", " .. spot.zone) or "", spot.x, spot.y))
         return
     end
     if toItem and q.turnInMapID and q.turnInX and q.turnInY then
@@ -1601,13 +1695,17 @@ local function ShowQuestTooltip(row, q)
     if q.fromItem then
         GameTooltip:AddLine(("Starts from an item, taken here: %s"):format(where), 1, 0.82, 0)
     elseif q.handIn then
-        GameTooltip:AddLine(("Handed straight in to %s, %s"):format(q.giver or "an unknown NPC", where),
-            1, 0.82, 0)
+        GameTooltip:AddLine(("Handed straight in to %s, %s%s"):format(q.giver or "an unknown NPC", where,
+            ItemSpots(q) and " -- ctrl-click to mark it" or ""), 1, 0.82, 0, true)
     else
         GameTooltip:AddLine(("From %s, %s"):format(q.giver or "an unknown giver", where), 1, 0.82, 0)
     end
     if q.patrols then
         GameTooltip:AddLine(("%s patrols, so look along the way"):format(q.giver or "The giver"), 1, 0.82, 0, true)
+    end
+    if q.legacy then
+        GameTooltip:AddLine(("Legacy reward from Legacy level %d (yours: %s)"):format(q.legacy,
+            tostring(LegacyLevel() or "unknown")), 1, 0.82, 0, true)
     end
     if q.after then
         local previous = AllQuests()[q.after]
@@ -1642,12 +1740,30 @@ local function ShowQuestTooltip(row, q)
     if q.needs then
         GameTooltip:AddLine("Needs: " .. q.needs, 1, 0.5, 0.25, true)
     end
-    if q.itemMapID and q.itemX and q.itemY then
-        GameTooltip:AddLine(("The item lies in %s (%.1f, %.1f) -- ctrl-click to mark it"):format(
-            q.itemZone or "?", q.itemX, q.itemY), 1, 0.82, 0, true)
+    local spots = ItemSpots(q)
+    if spots then
+        local here = (q.here and #q.here > 0) and q.here or { spots[1] }
+        if #here == 1 then
+            GameTooltip:AddLine(("The item lies in %s (%.1f, %.1f) -- click to mark it"):format(
+                here[1].zone or "?", here[1].x, here[1].y), 1, 0.82, 0, true)
+        else
+            GameTooltip:AddLine(("The item lies in one of %d places in %s -- click marks the nearest"):format(
+                #here, here[1].zone or "?"), 1, 0.82, 0, true)
+        end
+        if here[1].hint then GameTooltip:AddLine(here[1].hint, 0.8, 0.8, 0.8, true) end
+        local elsewhere, seen = {}, { [NormalName(here[1].zone or "")] = true }
+        for _, spot in ipairs(spots) do
+            if not seen[NormalName(spot.zone)] then
+                seen[NormalName(spot.zone)] = true
+                table.insert(elsewhere, spot.zone)
+            end
+        end
+        if #elsewhere > 0 then
+            GameTooltip:AddLine("Also lies in " .. table.concat(elsewhere, ", "), 0.8, 0.8, 0.8, true)
+        end
     end
     if q.turnInMapID and q.turnInX and q.turnInY then
-        local action = (q.itemMapID and q.itemX and q.itemY) and "" or " -- ctrl-click to mark it"
+        local action = spots and "" or " -- ctrl-click to mark it"
         GameTooltip:AddLine(("Handed in %sin %s (%.1f, %.1f)%s"):format(
             q.turnIn and ("at " .. q.turnIn .. " ") or "", q.turnInZone or "?",
             q.turnInX, q.turnInY, action), 1, 0.82, 0, true)
@@ -1691,7 +1807,11 @@ local function ShowQuestTooltip(row, q)
     if q.classic then
         GameTooltip:AddLine("From Classic's data, not yet seen in Forever.", 0.6, 0.6, 0.6, true)
     end
-    GameTooltip:AddLine(STATUS_TEXT[QuestStatus(q.id)], 0.6, 0.8, 1)
+    if q.unrecorded then
+        GameTooltip:AddLine("Quest not recorded yet: handed in to the librarian, probably", 0.6, 0.6, 0.6, true)
+    else
+        GameTooltip:AddLine(STATUS_TEXT[QuestStatus(q.id)], 0.6, 0.8, 1)
+    end
     GameTooltip:AddLine("Click to mark where it is picked up.", 0.6, 0.6, 0.6)
     if IsEditor() then
         GameTooltip:AddLine("Right-click to set which quest comes before it or unlocks it.", 0.6, 0.6, 0.6)
@@ -2024,7 +2144,8 @@ local function DrawQuestRow(row, q, level)
         or BreadcrumbSpent(q, q.id)
     -- A quest without a level (a book hand-in, whose danger depends on where
     -- the book is found) shows no bracket rather than a question mark.
-    local levelText = (q.level and tostring(q.level) or "") .. (q.group and "+" or "")
+    -- A legacy reward's quest level is the client's filler, not a danger.
+    local levelText = (q.level and not q.legacy and tostring(q.level) or "") .. (q.group and "+" or "")
     if levelText ~= "" then levelText = "[" .. levelText .. "] " end
     local mark = status == "active" and "\194\187 " or ""
     row.text:ClearAllPoints()
@@ -2042,6 +2163,7 @@ local function DrawQuestRow(row, q, level)
     if q.class then tags = tags .. (" |cff999999(%s)|r"):format(CLASS_NAME[q.class] or q.class) end
     if q.profession then tags = tags .. (" |cff999999(%s)|r"):format(q.profession) end
     if q.classic then tags = tags .. " |cff999999(preliminary)|r" end
+    if q.legacy then tags = tags .. (" |cff999999(legacy %d)|r"):format(q.legacy) end
     row.text:SetText(("%s%s%s%s%s"):format(mark, q.dungeon and DungeonMark() or "",
         levelText, q.title or ("Quest " .. q.id), tags))
     if q.level and not IsBook(q) then
