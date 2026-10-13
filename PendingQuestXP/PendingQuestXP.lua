@@ -481,6 +481,7 @@ end
 -- Which of the reward-XP calls this client actually answers. /pqx debug
 -- prints it; nil means nothing has returned a number yet.
 local xpSource = nil
+local xpCache = {}
 
 -- GetQuestLogRewardXP has historically answered for the SELECTED quest rather
 -- than for one passed in, and a call given an argument it does not take
@@ -524,9 +525,20 @@ local function PreviewXP(questID)
         return xp
     end
 
+    -- Moving the selection mid-fight taints what the map reads when it opens
+    -- (SetPassThroughButtons gets blocked), so it is only moved out of combat
+    -- and the answer kept until the level changes.
+    local level = UnitLevel and UnitLevel("player")
+    local cached = xpCache[questID]
+    if cached and (cached.level == level or (InCombatLockdown and InCombatLockdown())) then
+        return cached.xp
+    end
+    if InCombatLockdown and InCombatLockdown() then return 0 end
+
     xp = SelectedQuestXP(questID)
     if xp > 0 then
         xpSource = "selected quest + GetQuestLogRewardXP()"
+        xpCache[questID] = { level = level, xp = xp }
         return xp
     end
 
@@ -991,11 +1003,50 @@ local ShowQuestTooltip
 -- combat the client holds it back and opens it afterwards, still carrying the
 -- addon's taint, and Blizzard's own code then fails on the values it keeps
 -- secret. The Controller UI guards the map at all times; its gamepad action
--- bar and cinematic skip button give it away.
-local function MayOpenPanels()
-    if InCombatLockdown and InCombatLockdown() then return false end
+-- bar and cinematic skip button give it away. Even changing what an open
+-- quest log shows fails there once the map closes.
+local function InCombat()
+    return InCombatLockdown and InCombatLockdown() and true or false
+end
+
+local function ControllerUI()
     local bar = GamepadMainActionBarFrame
-    return not (GamepadCinematicSkipButton or (bar and bar.IsShown and bar:IsShown()))
+    return (GamepadCinematicSkipButton or (bar and bar.IsShown and bar:IsShown())) and true or false
+end
+
+local function MayOpenPanels()
+    return not (InCombat() or ControllerUI())
+end
+
+-- A quest clicked in combat waits here. Nothing of Blizzard's is touched
+-- until the fight is over: even supertracking or selecting a quest mid-fight
+-- left the map's pins tainted (SetPassThroughButtons got blocked). Then it is
+-- tracked, and shown when the player opens the map themselves. A watcher of
+-- our own polls for that, so no addon code runs inside the map's OnShow.
+local pendingQuest
+local tracked = false
+local watcher = CreateFrame("Frame")
+watcher:Hide()
+
+local function ApplyPending()
+    if not pendingQuest or not MayOpenPanels() then return end
+    if not tracked then
+        Call(C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID, pendingQuest)
+        tracked = true
+    end
+    if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end
+    local questID = pendingQuest
+    pendingQuest = nil
+    watcher:Hide()
+    Call(C_QuestLog and C_QuestLog.SetSelectedQuest, questID)
+    Call(QuestMapFrame_ShowQuestDetails, questID)
+end
+watcher:SetScript("OnUpdate", ApplyPending)
+
+local function SetPending(questID)
+    pendingQuest = questID
+    tracked = false
+    if questID then watcher:Show() else watcher:Hide() end
 end
 
 -- Opens the quest the row stands for. Shift-click links it in chat instead,
@@ -1023,12 +1074,19 @@ local function OnRowClick(self, button)
         end
     end
 
-    Call(C_QuestLog and C_QuestLog.SetSelectedQuest, q.questID)
-    Call(C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID, q.questID)
-    if not MayOpenPanels() then
-        Msg("the quest log stays closed in combat or with the Controller UI -- open it yourself.")
+    if InCombat() then
+        SetPending(q.questID)
+        Msg("the quest log stays closed in combat -- " ..
+            "open the map afterwards and the quest is waiting there.")
         return
     end
+    SetPending(nil)
+    Call(C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID, q.questID)
+    if ControllerUI() then
+        Msg("the quest log stays closed with the Controller UI -- open it yourself.")
+        return
+    end
+    Call(C_QuestLog and C_QuestLog.SetSelectedQuest, q.questID)
     if not Call(QuestMapFrame_OpenToQuestDetails, q.questID) then
         Msg("could not open " .. (q.title or tostring(q.questID)) ..
             " -- open the quest log instead.")
