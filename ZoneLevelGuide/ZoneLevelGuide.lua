@@ -1007,7 +1007,19 @@ local function AllQuests()
     if allQuests then return allQuests end
     local all = {}
     for id, q in pairs(ns.CLASSIC_QUESTS or {}) do all[id] = q end
-    for id, q in pairs(ns.RECORDED_QUESTS or {}) do all[id] = q end
+    -- A quest both sides take, each somewhere else: yours is the place shown.
+    local prefix = ({ A = "alliance", H = "horde" })[PlayerSide() or ""]
+    for id, q in pairs(ns.RECORDED_QUESTS or {}) do
+        if prefix and q[prefix .. "Zone"] then
+            local yours = {}
+            for k, v in pairs(q) do yours[k] = v end
+            for _, field in ipairs({ "zone", "mapID", "x", "y", "giver" }) do
+                yours[field] = q[prefix .. field:sub(1, 1):upper() .. field:sub(2)]
+            end
+            q = yours
+        end
+        all[id] = q
+    end
     for id, q in pairs(ZoneLevelGuideDB.quests or {}) do
         local merged = {}
         for k, v in pairs(all[id] or {}) do merged[k] = v end

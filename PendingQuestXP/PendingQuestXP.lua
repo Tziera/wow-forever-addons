@@ -987,6 +987,17 @@ local rowPool = {}
 -- tooltip itself is defined.
 local ShowQuestTooltip
 
+-- Opening a Blizzard panel from addon code is only safe out of combat: in
+-- combat the client holds it back and opens it afterwards, still carrying the
+-- addon's taint, and Blizzard's own code then fails on the values it keeps
+-- secret. The Controller UI guards the map at all times; its gamepad action
+-- bar and cinematic skip button give it away.
+local function MayOpenPanels()
+    if InCombatLockdown and InCombatLockdown() then return false end
+    local bar = GamepadMainActionBarFrame
+    return not (GamepadCinematicSkipButton or (bar and bar.IsShown and bar:IsShown()))
+end
+
 -- Opens the quest the row stands for. Shift-click links it in chat instead,
 -- the same gesture as everywhere else in the game, and right-click parks it
 -- as later.
@@ -1014,6 +1025,10 @@ local function OnRowClick(self, button)
 
     Call(C_QuestLog and C_QuestLog.SetSelectedQuest, q.questID)
     Call(C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID, q.questID)
+    if not MayOpenPanels() then
+        Msg("the quest log stays closed in combat or with the Controller UI -- open it yourself.")
+        return
+    end
     if not Call(QuestMapFrame_OpenToQuestDetails, q.questID) then
         Msg("could not open " .. (q.title or tostring(q.questID)) ..
             " -- open the quest log instead.")

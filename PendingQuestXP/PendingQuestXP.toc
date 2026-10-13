@@ -2,7 +2,7 @@
 ## Title: Pending Quest XP
 ## Notes: A turn-in queue: quests that are complete leave Blizzard's tracker and land here, under a header showing whether handing them all in is enough to level.
 ## Author: Tziera
-## Version: 0.1
+## Version: 0.1.1
 ## X-License: GPL-3.0-or-later
 # Sacrificial first line: the beta client appears to drop whichever
 # SavedVariables directive comes first. PendingQuestXPScratchDB is never touched
