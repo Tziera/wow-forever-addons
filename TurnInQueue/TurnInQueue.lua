@@ -1,7 +1,7 @@
 local ADDON_NAME, ns = ...
 
 -- ============================================================
--- Pending Quest XP -- the turn-in queue. Blizzard's tracker is for work in
+-- Turn-In Queue -- the turn-in queue. Blizzard's tracker is for work in
 -- progress: a quest that goes complete is dropped from it and shows up here
 -- instead, under a header that answers the one question left -- if I hand all
 -- of these in, do I ding?
@@ -28,7 +28,7 @@ local MIN_FONT_SIZE, MAX_FONT_SIZE = 6, 24
 -- Chrome fields left out (edge, outline, bar, accentLine, divider) are not
 -- drawn; bgScale scales the background opacity setting.
 --
--- (Copied between DungeonLevelGuide and PendingQuestXP for the same reason
+-- (Copied between DungeonLevelGuide and TurnInQueue for the same reason
 -- as the font helpers below.)
 -- ------------------------------------------------------------
 
@@ -148,7 +148,7 @@ local STYLES = {
 }
 
 local function Style()
-    return STYLES[PendingQuestXPDB and PendingQuestXPDB.style] or STYLES[DEFAULT_STYLE]
+    return STYLES[TurnInQueueDB and TurnInQueueDB.style] or STYLES[DEFAULT_STYLE]
 end
 
 -- true for the looks that bring their own fonts and palette.
@@ -336,7 +336,7 @@ local function BaseFontSize()
 end
 
 local function FontSize()
-    return (PendingQuestXPDB and PendingQuestXPDB.fontSize) or BaseFontSize()
+    return (TurnInQueueDB and TurnInQueueDB.fontSize) or BaseFontSize()
 end
 
 -- What is actually drawn: the styled fonts run small beside the client's, so
@@ -398,7 +398,7 @@ local GROUP_TAGS = {
 }
 
 local function Msg(text)
-    print("|cff00ff00PendingQuestXP|r: " .. text)
+    print("|cff00ff00TurnInQueue|r: " .. text)
 end
 
 -- Every client call goes through here. Returning pcall's own ok flag keeps
@@ -421,13 +421,15 @@ local DEFAULTS = {
     untrackDeliveries = false,  -- also untrack quests that were complete on accept
     style = DEFAULT_STYLE,      -- one of STYLE_ORDER
     showLater = true,   -- parked quests sink to the bottom; false hides them
+    openMap = false,    -- a click opens the quest log; off, it only tracks the quest
     bgAlpha = 0.75,     -- 0 see-through, 1 solid
     fontSize = 12,      -- 6-24, the size DungeonLevelGuide shows; nil follows the client
+    compact = false,    -- the XP line moves onto Blizzard's XP bar
 }
 
 local function EnsureDB()
-    PendingQuestXPDB = PendingQuestXPDB or {}
-    local db = PendingQuestXPDB
+    TurnInQueueDB = TurnInQueueDB or {}
+    local db = TurnInQueueDB
     for key, value in pairs(DEFAULTS) do
         if db[key] == nil then db[key] = value end
     end
@@ -441,15 +443,18 @@ local function EnsureDB()
     -- [questID] = true for the quests you have parked as "later". Set by hand
     -- only; see the Later section.
     db.later = db.later or {}
+    -- Left behind by the XP bar probe and the divider check, October 2026.
+    db.barProbe = nil
+    db.compactLevels = nil
 end
 
 -- Counts logins, and nothing else. The beta client was caught writing
 -- SavedVariables it then never reads back (see README), so "did anything
 -- survive?" needs an answer that cannot be confused with a default: a counter
--- stuck at 1 means the file is not being read. /pqx debug prints it.
+-- stuck at 1 means the file is not being read. /tiq debug prints it.
 local function CountSession()
-    if not PendingQuestXPDB then return end
-    PendingQuestXPDB.sessions = (PendingQuestXPDB.sessions or 0) + 1
+    if not TurnInQueueDB then return end
+    TurnInQueueDB.sessions = (TurnInQueueDB.sessions or 0) + 1
 end
 
 -- ------------------------------------------------------------
@@ -478,7 +483,7 @@ local function QuestLevel(questID, entry)
     return nil
 end
 
--- Which of the reward-XP calls this client actually answers. /pqx debug
+-- Which of the reward-XP calls this client actually answers. /tiq debug
 -- prints it; nil means nothing has returned a number yet.
 local xpSource = nil
 local xpCache = {}
@@ -657,18 +662,18 @@ end
 -- ------------------------------------------------------------
 
 local function IsLater(questID)
-    local db = PendingQuestXPDB
+    local db = TurnInQueueDB
     return (db and db.later and db.later[questID]) and true or false
 end
 
 -- nil rather than false: the table is saved, and false entries would pile up
 -- one per quest you ever parked.
 local function SetLater(questID, later)
-    PendingQuestXPDB.later[questID] = later or nil
+    TurnInQueueDB.later[questID] = later or nil
 end
 
 local function ShowingLater()
-    local db = PendingQuestXPDB
+    local db = TurnInQueueDB
     return not db or db.showLater ~= false
 end
 
@@ -712,7 +717,7 @@ end
 -- UI
 -- ------------------------------------------------------------
 
-local frame = CreateFrame("Frame", "PendingQuestXPFrame", UIParent)
+local frame = CreateFrame("Frame", "TurnInQueueFrame", UIParent)
 frame:SetSize(250, 200)
 frame:SetPoint("CENTER")
 frame:SetMovable(true)
@@ -735,7 +740,7 @@ bg:SetColorTexture(0, 0, 0, 0.75)
 local function ApplyBackground()
     local r, g, b = 0, 0, 0
     if Styled() then r, g, b = RGB(Style().bg) end
-    bg:SetColorTexture(r, g, b, ((PendingQuestXPDB and PendingQuestXPDB.bgAlpha) or 0.75) * (Style().bgScale or 1))
+    bg:SetColorTexture(r, g, b, ((TurnInQueueDB and TurnInQueueDB.bgAlpha) or 0.75) * (Style().bgScale or 1))
 end
 
 local border = frame:CreateTexture(nil, "BORDER")
@@ -765,7 +770,7 @@ header:SetPoint("TOPRIGHT", titleBar, "BOTTOMRIGHT", -8, -2)
 header:SetJustifyH("LEFT")
 frame.header = header
 
-local scrollFrame = CreateFrame("ScrollFrame", "PendingQuestXPScrollFrame", frame, "UIPanelScrollFrameTemplate")
+local scrollFrame = CreateFrame("ScrollFrame", "TurnInQueueScrollFrame", frame, "UIPanelScrollFrameTemplate")
 scrollFrame:SetPoint("TOPLEFT", 8, -44)
 scrollFrame:SetPoint("BOTTOMRIGHT", -28, 20)
 
@@ -812,7 +817,7 @@ local function ShowScrollBar(show)
     if show == scrollBarShown then return false end
     scrollBarShown = show
 
-    local bar = _G["PendingQuestXPScrollFrameScrollBar"]
+    local bar = _G["TurnInQueueScrollFrameScrollBar"]
     if bar then
         if show then bar:Show() else bar:Hide() end
     end
@@ -829,14 +834,21 @@ local HEAD_GAP = 8
 -- The styled looks' XP bar under the header.
 local XP_BAR_HEIGHT = 5
 
--- Kept for /pqx layout, which is the only way to see these numbers from
+-- Kept for /tiq layout, which is the only way to see these numbers from
 -- inside the game.
 local listTop = 0
 
+-- See the Compact section; active only while there is a Blizzard bar to draw on.
+local Compact = { active = false }
+
 local function LayoutPanel()
     titleBar:SetHeight(math.max(22, StringHeight(title) + 8))
-    local bar = Styled() and (4 + XP_BAR_HEIGHT) or 0
-    listTop = titleBar:GetHeight() + 2 + StringHeight(header) + bar + HEAD_GAP
+    if Compact.active then
+        listTop = titleBar:GetHeight() + HEAD_GAP / 2
+    else
+        local bar = Styled() and (4 + XP_BAR_HEIGHT) or 0
+        listTop = titleBar:GetHeight() + 2 + StringHeight(header) + bar + HEAD_GAP
+    end
     scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -listTop)
 end
 
@@ -881,6 +893,27 @@ divider:SetHeight(1)
 
 local plainClose = PlainButton(titleBar, "\195\151", 18, 18)
 plainClose:SetPoint("TOPRIGHT", -4, -3)
+
+-- The -/+ that folds the panel up to its title bar; see the Collapse section.
+-- On the frame rather than a local: the main chunks are at Lua's 200-local limit.
+frame.Collapse = { hidden = {} }
+frame.Collapse.button = PlainButton(titleBar, "-", 18, 18)
+frame.collapseButton = frame.Collapse.button
+
+function frame.Collapse.Paint()
+    local b = frame.Collapse.button
+    b:ClearAllPoints()
+    if Styled() then
+        b:SetPoint("RIGHT", plainClose, "LEFT", -2, 0)
+        PaintButton(b, true)
+    else
+        b:SetPoint("RIGHT", closeBtn, "LEFT", 2, 0)
+        b.fill:Hide()
+        b.label:SetTextColor(1, 0.82, 0)
+    end
+    local folded = TurnInQueueDB and TurnInQueueDB.collapsed
+    b.label:SetText(folded and "+" or (Styled() and "\226\136\146" or "-"))
+end
 
 -- Under the header: what you have, and in the pending colour what the queue
 -- would add. It says the same as the numbers, only faster.
@@ -953,11 +986,13 @@ end
 local function SavePosition()
     local left, top = frame:GetLeft(), frame:GetTop()
     if not (left and top) then return end
-    PendingQuestXPDB.point = { point = "TOPLEFT", relativePoint = "BOTTOMLEFT", x = left, y = top }
+    TurnInQueueDB.point = { point = "TOPLEFT", relativePoint = "BOTTOMLEFT", x = left, y = top }
+    frame.Collapse.Paint()
+    frame.Collapse.HideBody()
 end
 
 local function SaveSize()
-    PendingQuestXPDB.size = { width = frame:GetWidth(), height = frame:GetHeight() }
+    TurnInQueueDB.size = { width = frame:GetWidth(), height = frame:GetHeight() }
 end
 
 -- The client keeps its own memory of where you dragged a movable frame, in
@@ -972,7 +1007,7 @@ local function ClientPlacedIt()
 end
 
 local function RestoreFrame()
-    local p = PendingQuestXPDB.point
+    local p = TurnInQueueDB.point
     if p then
         frame:ClearAllPoints()
         frame:SetPoint(p.point, UIParent, p.relativePoint, p.x, p.y)
@@ -981,12 +1016,13 @@ local function RestoreFrame()
         frame:SetPoint("CENTER")
     end
 
-    local size = PendingQuestXPDB.size
+    local size = TurnInQueueDB.size
     if size then
         frame:SetSize(size.width, size.height)
     end
 
-    if PendingQuestXPDB.shown then frame:Show() else frame:Hide() end
+    if TurnInQueueDB.shown then frame:Show() else frame:Hide() end
+    frame.Collapse.Apply()
 end
 
 -- ------------------------------------------------------------
@@ -1023,6 +1059,9 @@ end
 -- left the map's pins tainted (SetPassThroughButtons got blocked). Then it is
 -- tracked, and shown when the player opens the map themselves. A watcher of
 -- our own polls for that, so no addon code runs inside the map's OnShow.
+-- With openMap off the quest is only tracked: a map opened or changed by
+-- addon code keeps the taint in its pins, and the same error comes when the
+-- player opens the map in combat later.
 local pendingQuest
 local tracked = false
 local watcher = CreateFrame("Frame")
@@ -1033,6 +1072,11 @@ local function ApplyPending()
     if not tracked then
         Call(C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID, pendingQuest)
         tracked = true
+    end
+    if not TurnInQueueDB.openMap then
+        pendingQuest = nil
+        watcher:Hide()
+        return
     end
     if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end
     local questID = pendingQuest
@@ -1076,12 +1120,17 @@ local function OnRowClick(self, button)
 
     if InCombat() then
         SetPending(q.questID)
-        Msg("the quest log stays closed in combat -- " ..
-            "open the map afterwards and the quest is waiting there.")
+        Msg(TurnInQueueDB.openMap
+            and "the quest log stays closed in combat -- open the map afterwards and the quest is waiting there."
+            or "the quest is tracked once the fight is over.")
         return
     end
     SetPending(nil)
     Call(C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID, q.questID)
+    if not TurnInQueueDB.openMap then
+        Msg(("tracking %s -- open the map yourself to see it."):format(q.title or tostring(q.questID)))
+        return
+    end
     if ControllerUI() then
         Msg("the quest log stays closed with the Controller UI -- open it yourself.")
         return
@@ -1177,7 +1226,7 @@ end
 local sawUnfinished = {}
 
 local function CollectPending()
-    local db = PendingQuestXPDB
+    local db = TurnInQueueDB
     local pending = {}
 
     for _, entry in ipairs(QuestLogEntries()) do
@@ -1300,28 +1349,147 @@ local function StyledHeader(xp, sum, xpMax, waiting, laterSum)
     return text
 end
 
+-- ------------------------------------------------------------
+-- Compact: the XP line moves onto Blizzard's XP bar
+--
+-- Forever has the modern status tracking bars: unnamed bars stacked in
+-- MainStatusTrackingBarContainer, one shown at a time. The XP bar is the one
+-- with the rested fill. Ours is a frame laid over it that only reads its
+-- size, so nothing of Blizzard's is changed. With no XP bar on screen -- max
+-- level, a reputation in its place, another addon's bar instead -- the
+-- panel keeps its own header.
+-- ------------------------------------------------------------
+
+local RESTED_COLOR = "4d9fff"
+
+function Compact.BlizzardBar()
+    local container = _G.MainStatusTrackingBarContainer
+    if not (container and container.GetChildren) then return nil end
+    for _, child in ipairs({ container:GetChildren() }) do
+        if type(child.ExhaustionLevelFillBar) == "table" and type(child.StatusBar) == "table"
+            and child:IsVisible() then
+            return child
+        end
+    end
+    return nil
+end
+
+local overlay = CreateFrame("Frame", nil, UIParent)
+overlay:Hide()
+overlay.pending = overlay:CreateTexture(nil, "ARTWORK")
+-- The text sits in a frame of its own, above the 5% dividers; the segment
+-- stays under them like Blizzard's own fill.
+overlay.textFrame = CreateFrame("Frame", nil, overlay)
+overlay.textFrame:SetAllPoints()
+overlay.text = overlay.textFrame:CreateFontString(nil, "OVERLAY", "TextStatusBarText")
+overlay.text:SetPoint("CENTER")
+frame.compactText = overlay.text
+
+-- The XP bar is drawn in LOW strata and the 5% dividers beside it in its
+-- container's MEDIUM, so a child of the bar is under them whatever its level.
+-- The text takes the container's strata and goes one level above what is
+-- shown there. Checked again twice a second, since a strata set on the bar
+-- would carry down to it.
+function Compact.RaiseText()
+    local bar = overlay.bar
+    if not bar then return end
+    local container = bar:GetParent()
+    local strata = container:GetFrameStrata()
+    local top = 0
+    for _, child in ipairs({ container:GetChildren() }) do
+        -- Shown ones only: Edit Mode's selection frame sits at 1000.
+        if child:IsShown() and child:GetFrameStrata() == strata then
+            top = math.max(top, child:GetFrameLevel() or 0)
+        end
+    end
+    local text = overlay.textFrame
+    if strata and text:GetFrameStrata() ~= strata then text:SetFrameStrata(strata) end
+    if text:GetFrameLevel() ~= top + 1 then text:SetFrameLevel(top + 1) end
+end
+
+-- Blizzard's own text shows while the mouse is over the bar; ours steps aside.
+overlay:SetScript("OnUpdate", function(self, elapsed)
+    local bar = self.bar
+    ShowIf(self.text, not (bar and bar.IsMouseOver and bar:IsMouseOver()))
+    self.sinceRaise = (self.sinceRaise or 0) + (elapsed or 0)
+    if self.sinceRaise > 0.5 then
+        self.sinceRaise = 0
+        Compact.RaiseText()
+    end
+end)
+-- The segment is placed in pixels, so a bar resized in Edit Mode needs a redraw.
+overlay:SetScript("OnSizeChanged", function() if ns.Refresh then ns.Refresh() end end)
+
+local function CompactText(xp, rested, sum, xpMax, waiting, laterSum)
+    local style = Style()
+    local n = Styled() and Grouped or function(v) return tostring(math.floor(v)) end
+    local text = n(xp)
+    if rested and rested > 0 then
+        text = text .. (" |cff%s(%s)|r"):format(RESTED_COLOR, n(rested))
+    end
+    if waiting > 0 then
+        text = text .. (" |cff%s+%s|r"):format(style.xpPending or "ffd100", n(sum))
+    end
+    text = text .. " / " .. n(xpMax)
+    if waiting > 0 and xp + sum >= xpMax then
+        text = text .. ("  |cff%sDING|r"):format(style.ding or "33ff33")
+    end
+    if laterSum > 0 then
+        text = text .. ("  |cff%s+%s later|r"):format(style.faint or "808080", n(laterSum))
+    end
+    return text
+end
+
+-- false when there is no XP bar to draw on.
+function Compact.Draw(xp, rested, sum, xpMax, waiting, laterSum)
+    local bar = Compact.BlizzardBar()
+    if not bar then
+        overlay:Hide()
+        return false
+    end
+    local status = bar.StatusBar
+    if overlay.bar ~= bar then
+        overlay.bar = bar
+        overlay:SetParent(bar)
+        overlay:ClearAllPoints()
+        overlay:SetAllPoints(status)
+    end
+    overlay:SetFrameLevel(status:GetFrameLevel() + 1)
+    Compact.RaiseText()
+
+    -- Full height over the rested fill: the text carries the rested amount.
+    local width = status:GetWidth() or 0
+    local nowShare = math.min(1, xp / xpMax)
+    local pendingShare = math.min(1 - nowShare, sum / xpMax)
+    local ding = waiting > 0 and xp + sum >= xpMax
+    local style = Style()
+    ShowIf(overlay.pending, pendingShare > 0 and width > 0)
+    overlay.pending:ClearAllPoints()
+    overlay.pending:SetPoint("TOPLEFT", overlay, "TOPLEFT", width * nowShare, 0)
+    overlay.pending:SetPoint("BOTTOMLEFT", overlay, "BOTTOMLEFT", width * nowShare, 0)
+    overlay.pending:SetWidth(math.max(1, width * pendingShare))
+    overlay.pending:SetColorTexture(RGB(ding and (style.ding or "33ff33") or (style.xpPending or "ffd100")))
+
+    overlay.text:SetText(CompactText(xp, rested, sum, xpMax, waiting, laterSum))
+    overlay:Show()
+    return true
+end
+
+function Compact.Off()
+    overlay:Hide()
+    Compact.active = false
+end
+
 local function UpdateHeader(pending)
     local xp = UnitXP and UnitXP("player") or 0
     local xpMax = UnitXPMax and UnitXPMax("player") or 0
 
     if not xpMax or xpMax <= 0 then
+        Compact.Off()
+        header:Show()
+        ShowIf(xpBar, Styled())
         header:SetText("Max level -- quest XP no longer counts.")
         UpdateXPBar(0, 0, 0)
-        return
-    end
-
-    if Styled() then
-        local sum, laterSum, waiting = 0, 0, 0
-        for _, q in ipairs(pending) do
-            if q.later then
-                laterSum = laterSum + (q.xp or 0)
-            else
-                sum = sum + (q.xp or 0)
-                waiting = waiting + 1
-            end
-        end
-        header:SetText(StyledHeader(xp, sum, xpMax, waiting, laterSum))
-        UpdateXPBar(xp, sum, xpMax)
         return
     end
 
@@ -1333,6 +1501,25 @@ local function UpdateHeader(pending)
             sum = sum + (q.xp or 0)
             waiting = waiting + 1
         end
+    end
+
+    if TurnInQueueDB.compact then
+        local ok, rested = Call(GetXPExhaustion)
+        Compact.active = Compact.Draw(xp, ok and rested or nil, sum, xpMax, waiting, laterSum)
+    else
+        Compact.Off()
+    end
+    ShowIf(header, not Compact.active)
+    ShowIf(xpBar, Styled() and not Compact.active)
+    if Compact.active then
+        header:SetText("")
+        return
+    end
+
+    if Styled() then
+        header:SetText(StyledHeader(xp, sum, xpMax, waiting, laterSum))
+        UpdateXPBar(xp, sum, xpMax)
+        return
     end
 
     if #pending == 0 then
@@ -1447,11 +1634,12 @@ end
 local refreshing = false
 
 local function Refresh()
-    if not PendingQuestXPDB or refreshing then return end
+    if not TurnInQueueDB or refreshing then return end
 
     refreshing = true
     local ok, err = pcall(DoRefresh)
     refreshing = false
+    frame.Collapse.HideBody()
 
     if not ok then Msg("could not redraw the queue: " .. tostring(err)) end
 end
@@ -1467,14 +1655,14 @@ end
 -- nil for a name that is not a style.
 local function SetStyle(name)
     if not STYLES[name] then return nil end
-    PendingQuestXPDB.style = name
+    TurnInQueueDB.style = name
     ApplyLook()
     return name
 end
 
 local function SetFontSize(size)
     size = math.max(MIN_FONT_SIZE, math.min(MAX_FONT_SIZE, math.floor(size)))
-    PendingQuestXPDB.fontSize = size
+    TurnInQueueDB.fontSize = size
     ApplyLook()
     return size
 end
@@ -1482,7 +1670,7 @@ end
 -- Takes a percentage: "how see-through" is easier in whole numbers than 0.85.
 local function SetBackgroundAlpha(percent)
     percent = math.max(0, math.min(100, math.floor(percent)))
-    PendingQuestXPDB.bgAlpha = percent / 100
+    TurnInQueueDB.bgAlpha = percent / 100
     ApplyLook()
     return percent
 end
@@ -1503,11 +1691,11 @@ local settingsCategory
 local function BuildSettingsPage(page)
     local heading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     heading:SetPoint("TOPLEFT", 16, -16)
-    heading:SetText("Pending Quest XP")
+    heading:SetText("Turn-In Queue")
 
     local boxes = {}
     local function Checkbox(key, label, y)
-        local box = CreateFrame("CheckButton", "PendingQuestXPSettings" .. key .. "Check", page,
+        local box = CreateFrame("CheckButton", "TurnInQueueSettings" .. key .. "Check", page,
             "UICheckButtonTemplate")
         box:SetPoint("TOPLEFT", 10, y)
         box:SetSize(24, 24)
@@ -1515,20 +1703,23 @@ local function BuildSettingsPage(page)
         text:SetPoint("LEFT", box, "RIGHT", 2, 0)
         text:SetText(label)
         box:SetScript("OnClick", function(self)
-            PendingQuestXPDB[key] = self:GetChecked() and true or false
+            TurnInQueueDB[key] = self:GetChecked() and true or false
             if key == "shown" then
-                if PendingQuestXPDB.shown then frame:Show() else frame:Hide() end
+                if TurnInQueueDB.shown then frame:Show() else frame:Hide() end
             end
             Refresh()
         end)
         boxes[key] = box
         page[key] = box
+        page[key .. "Label"] = text
     end
 
     Checkbox("shown", "Show the turn-in queue", -48)
     Checkbox("autoUntrack", "Untrack completed quests from Blizzard's tracker", -74)
     Checkbox("untrackDeliveries", "Untrack delivery quests too (complete on accept)", -100)
     Checkbox("showLater", "Show parked quests, dimmed, at the bottom", -126)
+    Checkbox("openMap", "Open the quest log on a click (can cause blocked-action errors)", -152)
+    Checkbox("compact", "Compact: XP and pending XP on Blizzard's XP bar", -178)
 
     local function Stepper(key, y, step, get, set)
         local label = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -1549,24 +1740,24 @@ local function BuildSettingsPage(page)
     end
 
     local styleLabel = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    styleLabel:SetPoint("TOPLEFT", 14, -164)
+    styleLabel:SetPoint("TOPLEFT", 14, -216)
     styleLabel:SetText("Style")
-    page.styleDropdown = StyleDropdown(page, 58, -159, function(name)
+    page.styleDropdown = StyleDropdown(page, 58, -211, function(name)
         SetStyle(name)
         page.refresh()
     end)
 
-    Stepper("fontLabel", -194, 1, FontSize, SetFontSize)
-    Stepper("alphaLabel", -218, 5,
-        function() return (PendingQuestXPDB.bgAlpha or 0.75) * 100 end,
+    Stepper("fontLabel", -246, 1, FontSize, SetFontSize)
+    Stepper("alphaLabel", -270, 5,
+        function() return (TurnInQueueDB.bgAlpha or 0.75) * 100 end,
         SetBackgroundAlpha)
 
     local clear = CreateFrame("Button", nil, page, "UIPanelButtonTemplate")
     clear:SetSize(180, 22)
-    clear:SetPoint("TOPLEFT", 14, -250)
+    clear:SetPoint("TOPLEFT", 14, -302)
     clear:SetText("Put parked quests back")
     clear:SetScript("OnClick", function()
-        for questID in pairs(PendingQuestXPDB.later) do PendingQuestXPDB.later[questID] = nil end
+        for questID in pairs(TurnInQueueDB.later) do TurnInQueueDB.later[questID] = nil end
         Refresh()
     end)
 
@@ -1575,23 +1766,33 @@ local function BuildSettingsPage(page)
     hint:SetText("Settings are saved per character.")
 
     function page.refresh()
-        for key, box in pairs(boxes) do box:SetChecked(PendingQuestXPDB[key] and true or false) end
-        page.styleDropdown.Refresh(PendingQuestXPDB.style)
+        for key, box in pairs(boxes) do box:SetChecked(TurnInQueueDB[key] and true or false) end
+        -- The Controller UI keeps the quest log closed whatever the box says.
+        local controller = ControllerUI()
+        -- Hidden rather than disabled: the Controller UI's cursor still lands on a
+        -- disabled button, and clicking it froze the game.
+        page.openMap:SetShown(not controller)
+        page.openMapLabel:SetText(controller and "Open the quest log on a click -- not with the Controller UI"
+            or "Open the quest log on a click (can cause blocked-action errors)")
+        page.openMapLabel:SetTextColor(controller and 0.5 or 1, controller and 0.5 or 1, controller and 0.5 or 1)
+        page.styleDropdown.Refresh(TurnInQueueDB.style)
         page.fontLabel:SetText(("Text size: %d"):format(FontSize()))
         page.alphaLabel:SetText(("Background: %d%% opaque"):format(
-            math.floor((PendingQuestXPDB.bgAlpha or 0.75) * 100 + 0.5)))
+            math.floor((TurnInQueueDB.bgAlpha or 0.75) * 100 + 0.5)))
     end
 end
 
 local function RegisterSettingsPage()
     if settingsCategory then return end
     local page = CreateFrame("Frame")
-    page.name = "Pending Quest XP"
+    -- A new frame starts shown, so the panel showing it the first time is no
+    -- change and OnShow, which fills in the values, would not run.
+    page:Hide()
+    page.name = "Turn-In Queue"
+    -- Built now rather than in OnShow: creating the controls while the panel
+    -- was showing the page froze the game with the Controller UI.
+    BuildSettingsPage(page)
     page:SetScript("OnShow", function(self)
-        if not self.built then
-            self.built = true
-            BuildSettingsPage(self)
-        end
         self.refresh()
     end)
 
@@ -1618,7 +1819,7 @@ ns.RegisterSettingsPage = RegisterSettingsPage
 -- ------------------------------------------------------------
 -- Docking
 --
--- The panels of DungeonLevelGuide, PendingQuestXP and ZoneLevelGuide snap
+-- The panels of DungeonLevelGuide, TurnInQueue and ZoneLevelGuide snap
 -- together when one is dropped within SNAP pixels of another's edge, and
 -- then move as one: the upper (or left) panel carries the one below (or to
 -- its right) by anchoring it. Dragging a docked panel pulls it loose, taking
@@ -1634,7 +1835,7 @@ ns.RegisterSettingsPage = RegisterSettingsPage
 -- One table rather than a dozen locals: the main chunk of a WoW addon may
 -- hold no more than 200, and DungeonLevelGuide is close to that.
 local Dock = {
-    FRAMES = { "DungeonLevelGuideFrame", "PendingQuestXPFrame", "ZoneLevelGuideFrame" },
+    FRAMES = { "DungeonLevelGuideFrame", "TurnInQueueFrame", "ZoneLevelGuideFrame" },
     SNAP = 12,
     GAP = 4,
     REDOCK_TOLERANCE = 2,
@@ -1803,10 +2004,78 @@ end)
 
 local function Close()
     frame:Hide()
-    if PendingQuestXPDB then PendingQuestXPDB.shown = false end
+    if TurnInQueueDB then TurnInQueueDB.shown = false end
 end
 closeBtn:SetScript("OnClick", Close)
 plainClose:SetScript("OnClick", Close)
+
+-- ------------------------------------------------------------
+-- Collapse
+--
+-- Folds the panel up to its title bar, like Blizzard's quest tracker. What
+-- is below the title is hidden rather than clipped, so nothing folded away
+-- can be clicked; a redraw that shows something again is undone by
+-- HideBody. (Copied between the three addons.)
+-- ------------------------------------------------------------
+
+function frame.Collapse.HideBody()
+    if not (TurnInQueueDB and TurnInQueueDB.collapsed) then return end
+    for _, child in ipairs({ frame:GetChildren() }) do
+        if child ~= titleBar and child:IsShown() then
+            child:Hide()
+            frame.Collapse.hidden[child] = true
+        end
+    end
+    for _, region in ipairs({ frame:GetRegions() }) do
+        if region:GetObjectType() == "FontString" and region:IsShown() then
+            region:Hide()
+            frame.Collapse.hidden[region] = true
+        end
+    end
+end
+
+-- The resize bounds would otherwise stop the panel at its minimum height.
+function frame.Collapse.SetMinHeight(height)
+    if frame.GetResizeBounds then
+        local minW, _, maxW, maxH = frame:GetResizeBounds()
+        frame:SetResizeBounds(minW, height, maxW, maxH)
+    elseif frame.SetMinResize then
+        frame:SetMinResize((frame:GetMinResize()), height)
+    end
+end
+
+function frame.Collapse.Apply()
+    local db = TurnInQueueDB
+    if not db then return end
+    frame.Collapse.Paint()
+    if not frame.Collapse.minHeight then
+        local _, minHeight = Dock.Bounds(frame)
+        frame.Collapse.minHeight = minHeight
+    end
+    local barHeight = titleBar:GetHeight()
+    if db.collapsed then
+        -- Anchored by its top-left corner, so it folds upward.
+        if not Dock.Parent(frame) then Dock.Detach(frame) end
+        local height = frame:GetHeight() or 0
+        if height > barHeight + 20 then db.expandedHeight = height end
+        frame.Collapse.SetMinHeight(barHeight)
+        frame.Collapse.HideBody()
+        frame:SetHeight(barHeight)
+    elseif frame.Collapse.folded then
+        if not Dock.Parent(frame) then Dock.Detach(frame) end
+        for region in pairs(frame.Collapse.hidden) do region:Show() end
+        frame.Collapse.hidden = {}
+        frame.Collapse.SetMinHeight(frame.Collapse.minHeight)
+        frame:SetHeight(db.expandedHeight or (db.size and db.size.height) or 200)
+    end
+    frame.Collapse.folded = db.collapsed and true or false
+end
+
+frame.Collapse.button:SetScript("OnClick", function()
+    TurnInQueueDB.collapsed = not TurnInQueueDB.collapsed or nil
+    frame.Collapse.Apply()
+    Refresh()
+end)
 
 resizeGrip:SetScript("OnMouseDown", function() Dock.BeginSize(frame, resizeGrip) end)
 resizeGrip:SetScript("OnMouseUp", function()
@@ -1842,6 +2111,7 @@ for _, event in ipairs({
     "QUEST_TURNED_IN",
     "UNIT_QUEST_LOG_CHANGED",
     "PLAYER_XP_UPDATE",
+    "UPDATE_EXHAUSTION",
     "PLAYER_LEVEL_UP",
 }) do
     SafeRegister(eventFrame, event)
@@ -1853,7 +2123,7 @@ local function WarnAboutAutoTrack()
     local ok, value = Call(GetCVar, "autoQuestProgress")
     if ok and (value == "1" or value == 1) then
         Msg("the autoQuestProgress setting re-tracks completed quests. " ..
-            "/pqx auto off turns it off.")
+            "/tiq auto off turns it off.")
     end
 end
 
@@ -1873,7 +2143,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         ApplyLook()
     elseif event == "PLAYER_LOGOUT" then
         -- A panel moves when the one it hangs from is dragged or resized.
-        if PendingQuestXPDB then SavePosition() end
+        if TurnInQueueDB then SavePosition() end
     elseif event == "PLAYER_REGEN_ENABLED" then
         for questID in pairs(pendingUntrack) do
             pendingUntrack[questID] = nil
@@ -1897,17 +2167,21 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         local questID = ...
         if questID then
             sawUnfinished[questID] = nil
-            if PendingQuestXPDB then PendingQuestXPDB.earned[questID] = nil end
+            if TurnInQueueDB then TurnInQueueDB.earned[questID] = nil end
         end
         Refresh()
     else
-        if event == "PLAYER_ENTERING_WORLD" then Dock.RedockSoon(frame) end
+        if event == "PLAYER_ENTERING_WORLD" then
+            Dock.RedockSoon(frame)
+            -- Blizzard's bars fade in after login; draw on them once they are up.
+            if C_Timer then C_Timer.After(2, Refresh) end
+        end
         Refresh()
     end
 end)
 
 -- The eye compares "green" with Blizzard's quest log far better than it
--- compares 0.25/0.75/0.25, and the comparison is the whole point of /pqx debug.
+-- compares 0.25/0.75/0.25, and the comparison is the whole point of /tiq debug.
 local function ColorName(r, g, b)
     if not r then return "?" end
     if math.abs(r - g) < 0.1 and math.abs(g - b) < 0.1 then return "grey" end
@@ -1929,7 +2203,7 @@ local function PrintDebug()
         tostring(UnitXPMax and UnitXPMax("player")),
         xpSource or "nothing answered yet"))
 
-    local db = PendingQuestXPDB or {}
+    local db = TurnInQueueDB or {}
     local earned = 0
     for _ in pairs(db.earned or {}) do earned = earned + 1 end
     print(("  client layout memory holds this panel: %s"):format(
@@ -2021,8 +2295,9 @@ end
 -- Slash commands
 -- ------------------------------------------------------------
 
-SLASH_PENDINGQUESTXP1 = "/pqx"
-SlashCmdList["PENDINGQUESTXP"] = function(input)
+SLASH_TURNINQUEUE1 = "/tiq"
+SLASH_TURNINQUEUE2 = "/pqx"  -- the name until October 2026
+SlashCmdList["TURNINQUEUE"] = function(input)
     EnsureDB()
     local cmd, arg = string.match(input or "", "^%s*(%S*)%s*(%S*)")
     cmd = string.lower(cmd or "")
@@ -2030,7 +2305,7 @@ SlashCmdList["PENDINGQUESTXP"] = function(input)
 
     if cmd == "" or cmd == "toggle" then
         if frame:IsShown() then frame:Hide() else frame:Show() end
-        PendingQuestXPDB.shown = frame:IsShown() and true or false
+        TurnInQueueDB.shown = frame:IsShown() and true or false
         Refresh()
 
     elseif cmd == "auto" then
@@ -2044,19 +2319,24 @@ SlashCmdList["PENDINGQUESTXP"] = function(input)
             Call(SetCVar, "autoQuestProgress", "1")
             Msg("autoQuestProgress on -- the game re-tracks completed quests.")
         else
-            Msg("usage: /pqx auto on|off")
+            Msg("usage: /tiq auto on|off")
         end
+
+    elseif cmd == "map" then
+        TurnInQueueDB.openMap = not TurnInQueueDB.openMap
+        Msg(TurnInQueueDB.openMap and "a click opens the quest log."
+            or "a click only tracks the quest; open the map yourself.")
 
     elseif cmd == "untrack" then
         if arg == "off" then
-            PendingQuestXPDB.autoUntrack = false
+            TurnInQueueDB.autoUntrack = false
             Msg("leaving completed quests in the tracker.")
         elseif arg == "on" then
-            PendingQuestXPDB.autoUntrack = true
+            TurnInQueueDB.autoUntrack = true
             Msg("completed quests will be untracked again.")
         else
-            Msg("usage: /pqx untrack on|off (now: " ..
-                (PendingQuestXPDB.autoUntrack and "on" or "off") .. ")")
+            Msg("usage: /tiq untrack on|off (now: " ..
+                (TurnInQueueDB.autoUntrack and "on" or "off") .. ")")
         end
         Refresh()
 
@@ -2064,25 +2344,40 @@ SlashCmdList["PENDINGQUESTXP"] = function(input)
         if SetStyle(arg) then
             Msg(("style: %s."):format(STYLES[arg].label))
         else
-            Msg(("usage: /pqx style %s (now: %s)"):format(
-                table.concat(STYLE_ORDER, "|"), PendingQuestXPDB.style or DEFAULT_STYLE))
+            Msg(("usage: /tiq style %s (now: %s)"):format(
+                table.concat(STYLE_ORDER, "|"), TurnInQueueDB.style or DEFAULT_STYLE))
+        end
+
+    elseif cmd == "compact" then
+        if arg == "on" or arg == "off" then
+            TurnInQueueDB.compact = (arg == "on")
+        else
+            TurnInQueueDB.compact = not TurnInQueueDB.compact
+        end
+        Refresh()
+        if not TurnInQueueDB.compact then
+            Msg("compact off -- the XP line is back in the panel.")
+        elseif Compact.active then
+            Msg("compact on -- XP and pending XP are on Blizzard's XP bar.")
+        else
+            Msg("compact on, but no Blizzard XP bar is showing -- the panel keeps its XP line.")
         end
 
     elseif cmd == "deliveries" then
         if arg == "on" then
-            PendingQuestXPDB.untrackDeliveries = true
+            TurnInQueueDB.untrackDeliveries = true
             Msg("delivery quests leave the tracker too once they are in the queue.")
         elseif arg == "off" then
-            PendingQuestXPDB.untrackDeliveries = false
+            TurnInQueueDB.untrackDeliveries = false
             Msg("delivery quests stay in the tracker.")
         else
-            Msg("usage: /pqx deliveries on|off (now: " ..
-                (PendingQuestXPDB.untrackDeliveries and "on" or "off") .. ")")
+            Msg("usage: /tiq deliveries on|off (now: " ..
+                (TurnInQueueDB.untrackDeliveries and "on" or "off") .. ")")
         end
         Refresh()
 
     elseif cmd == "later" then
-        local db = PendingQuestXPDB
+        local db = TurnInQueueDB
         if arg == "show" or arg == "hide" then
             db.showLater = (arg == "show")
             Msg(db.showLater and "parked quests are shown, dimmed, at the bottom."
@@ -2106,7 +2401,7 @@ SlashCmdList["PENDINGQUESTXP"] = function(input)
             else
                 Msg(("parked as later: %s."):format(table.concat(names, ", ")))
             end
-            Msg("usage: /pqx later show|hide|clear (now: " ..
+            Msg("usage: /tiq later show|hide|clear (now: " ..
                 (ShowingLater() and "show" or "hide") .. ")")
         end
 
@@ -2124,7 +2419,7 @@ SlashCmdList["PENDINGQUESTXP"] = function(input)
         if n then
             Msg(("font size %d."):format(SetFontSize(n)))
         else
-            Msg(("usage: /pqx font <%d-%d>, currently %d."):format(
+            Msg(("usage: /tiq font <%d-%d>, currently %d."):format(
                 MIN_FONT_SIZE, MAX_FONT_SIZE, FontSize()))
         end
 
@@ -2133,13 +2428,13 @@ SlashCmdList["PENDINGQUESTXP"] = function(input)
         if n then
             Msg(("background %d%% opaque."):format(SetBackgroundAlpha(n)))
         else
-            Msg(("usage: /pqx alpha <0-100>, currently %d."):format(
-                math.floor((PendingQuestXPDB.bgAlpha or 0.75) * 100 + 0.5)))
+            Msg(("usage: /tiq alpha <0-100>, currently %d."):format(
+                math.floor((TurnInQueueDB.bgAlpha or 0.75) * 100 + 0.5)))
         end
 
     elseif cmd == "reset" then
-        PendingQuestXPDB.point = nil
-        PendingQuestXPDB.size = nil
+        TurnInQueueDB.point = nil
+        TurnInQueueDB.size = nil
         -- Let go of the client's layout memory too, or the panel snaps back to
         -- where it was at the next login and reset looks like it did nothing.
         if frame.SetUserPlaced then frame:SetUserPlaced(false) end
@@ -2150,8 +2445,8 @@ SlashCmdList["PENDINGQUESTXP"] = function(input)
         Msg("panel back at its default position and size.")
 
     else
-        Msg("/pqx toggles the panel. Also: later show|hide|clear, " ..
-            "untrack on|off, deliveries on|off, auto on|off, style <name>, font <n>, alpha <n>, debug, " ..
+        Msg("/tiq toggles the panel. Also: later show|hide|clear, " ..
+            "map, compact on|off, untrack on|off, deliveries on|off, auto on|off, style <name>, font <n>, alpha <n>, debug, " ..
             "colors, layout, reset.")
     end
 end

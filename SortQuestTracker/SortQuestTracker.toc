@@ -1,0 +1,16 @@
+## Interface: 16001
+## Title: Sort Quest Tracker
+## Notes: Orders the quest tracker: quests with something to do in your zone first, then by quest level.
+## Author: Tziera
+## Version: 1.0.0
+## IconTexture: Interface\AddOns\SortQuestTracker\icon
+## X-License: GPL-3.0-or-later
+# Sacrificial first line: the beta client appears to drop whichever
+# SavedVariables directive comes first. SortQuestTrackerScratchDB is never touched
+# by the code -- it exists so the real one below is not the first.
+## SavedVariables: SortQuestTrackerScratchDB
+## SavedVariablesPerCharacter: SortQuestTrackerDB
+
+# Interface number derived from the client's 1.60.1 -- see README.md.
+
+SortQuestTracker.lua

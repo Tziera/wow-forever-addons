@@ -16,8 +16,15 @@ to the map and the Group Finder.
 - **Dungeon quests.** `+` in front of a dungeon expands its quests. The
   tooltip shows who gives each quest and where. For a quest in a chain, it
   shows where the chain starts. Click a quest to put a pin on the map where
-  it is picked up. Right-click removes the pin. The other faction's quests
+  it is picked up. Right-click removes the pin. The colour shows each
+  quest's status: not picked up, in your log, ready to hand in (blue), or
+  handed in (grey and dimmed). The other faction's quests
   and quests you have already done can be hidden.
+- **The map opens only if you ask for it.** A click sets the pin and the
+  arrow; open the map yourself with M. With `/dlg map` (or the checkbox in
+  the options) a click opens the map too, but a map opened by an addon
+  carries its taint in the pins it draws, and opening the map yourself in
+  combat later can then give a "blocked from an action" error.
 - **Learns new dungeon quests** that you pick up in play, either from the
   quest text naming a dungeon or from progress made inside a dungeon. With
   Zone Level Guide installed, learned quests also get their quest giver and
@@ -25,9 +32,11 @@ to the map and the Group Finder.
 - **Settings panel** (`/dlg gui`) with all filters in one place, and a count of
   what each filter is hiding right now. Also available under Esc → Options →
   AddOns.
+- The −/+ beside the close button folds the panel up to its title bar, like
+  Blizzard's quest tracker, and unfolds it to the height it had.
 - Seven looks: `warm` (default), `flat`, `blizzard` and `minimal`, plus
   `elvui`, `details` and `pfui` to match those addons.
-- Snaps to Zone Level Guide and Pending Quest XP: drop one panel within a few
+- Snaps to Zone Level Guide and Turn-In Queue: drop one panel within a few
   pixels of another's edge and they move together.
 
 ## Commands
@@ -40,6 +49,7 @@ to the map and the Group Finder.
 | `/dlg widen` | Also show dungeons in your margin that the Group Finder does not offer, or go back (`/dlg lfgonly` does the same) |
 | `/dlg faction` | Show/hide the other faction's quests |
 | `/dlg done` | Show/hide quests you have already done |
+| `/dlg map` | Open the map on a click, or only set the pin (default) |
 | `/dlg clear` | Remove the map pin |
 | `/dlg learned` | List the dungeon quests learned this session |
 | `/dlg style <name>` | `warm`, `flat`, `blizzard`, `elvui`, `details`, `pfui` or `minimal` |
@@ -56,9 +66,7 @@ it. Settings are saved per character.
 
 ## Installation
 
-Put the `DungeonLevelGuide` folder in
-`World of Warcraft/_classic_beta_/Interface/AddOns/` (or the Forever client's
-own `Interface/AddOns/` folder once it is released).
+Put the `DungeonLevelGuide` folder in `World of Warcraft/_forever_/Interface/AddOns/`.
 
 ## Credits and licence
 

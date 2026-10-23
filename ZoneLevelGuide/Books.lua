@@ -142,3 +142,9 @@ ns.BOOKS = {
         at("Winterspring", 1452, 60.7, 37.7),
     },
 }
+
+-- Items that start a quest and turn up in several places, by the title of
+-- the quest they start, when Questie's places (ns.QUESTIE_ITEMS) are wrong
+-- or missing. Chen's Empty Keg and Owatanka's Tailspike are Questie's now.
+ns.QUEST_ITEMS = {
+}

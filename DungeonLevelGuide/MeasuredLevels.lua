@@ -7,6 +7,7 @@
 local _, ns = ...
 
 ns.MEASURED_LEVELS = {
-    ["Ragefire Chasm"] = { min = 13, max = 16, atLow = 17, atHigh = 17 },
+    ["Ragefire Chasm"] = { min = 13, max = 16, atLow = 17, atHigh = 30 },
+    ["Ruins of Lordaeron"] = { min = 15, max = 20, atLow = 21, atHigh = 21 },
     ["The Hall of Thanes"] = { min = 13, max = 16, atLow = 14, atHigh = 18 },
 }

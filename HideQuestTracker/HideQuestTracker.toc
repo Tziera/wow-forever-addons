@@ -1,0 +1,16 @@
+## Interface: 16001
+## Title: Hide Quest Tracker
+## Notes: Fades the quest tracker out while you are in combat, and keeps it from taking clicks until it is back.
+## Author: Tziera
+## Version: 1.0.0
+## IconTexture: Interface\AddOns\HideQuestTracker\icon
+## X-License: GPL-3.0-or-later
+# Sacrificial first line: the beta client appears to drop whichever
+# SavedVariables directive comes first. HideQuestTrackerScratchDB is never touched
+# by the code -- it exists so the real one below is not the first.
+## SavedVariables: HideQuestTrackerScratchDB
+## SavedVariablesPerCharacter: HideQuestTrackerDB
+
+# Interface number derived from the client's 1.60.1 -- see README.md.
+
+HideQuestTracker.lua

@@ -27,7 +27,7 @@ local MIN_FONT_SIZE, MAX_FONT_SIZE = 6, 24
 -- Chrome fields left out (edge, outline, bar, accentLine, divider) are not
 -- drawn; bgScale scales the background opacity setting.
 --
--- (Copied between DungeonLevelGuide and PendingQuestXP for the same reason
+-- (Copied between DungeonLevelGuide and TurnInQueue for the same reason
 -- as the font helpers below.)
 -- ------------------------------------------------------------
 
@@ -47,7 +47,7 @@ local STYLES = {
         span = "c9ced6", selected = "1e2227",
         buttonBg = "1c1f24", buttonEdge = "2b2f36", buttonText = "e6e8eb",
         lfg = "LFG", lfgColor = "4fb3c9", marker = "dot",
-        active = "5fd38a", open = "e8c547", done = "5c636d",
+        ready = "5cb8f0", active = "5fd38a", open = "e8c547", done = "5c636d",
         xpNow = "7a86e6", xpPending = "e8c547", xpTrack = "23272d", ding = "5fd38a",
         difficulty = {
             impossible = "e0564a", verydifficult = "f08a4b", difficult = "e8d547",
@@ -64,7 +64,7 @@ local STYLES = {
         span = "c9b893", selected = "251c14",
         buttonBg = "221a13", buttonEdge = "4a3b25", buttonText = "c9a45c",
         lfg = "\226\151\134", lfgColor = "8fc3d6", marker = "line",
-        active = "8fd18a", open = "e8c86a", done = "6b5e48",
+        ready = "7fbfe0", active = "8fd18a", open = "e8c86a", done = "6b5e48",
         xpNow = "8a6fc9", xpPending = "c9a45c", xpTrack = "2c2218", ding = "8fd18a",
         difficulty = {
             impossible = "e05a4a", verydifficult = "e8894b", difficult = "e8d86a",
@@ -82,7 +82,7 @@ local STYLES = {
         span = "d9d9d9", selected = "262626",
         buttonBg = "1a1a1a", buttonEdge = "000000", buttonText = "ffffff",
         lfg = "LFG", lfgColor = "1784d1", marker = "dot",
-        active = "40bf40", open = "ffd200", done = "7f7f7f",
+        ready = "3fa9f5", active = "40bf40", open = "ffd200", done = "7f7f7f",
         xpNow = "0066ff", xpPending = "40bf40", xpTrack = "0f0f0f", ding = "40bf40",
         difficulty = {
             impossible = "ff1a1a", verydifficult = "ff8040", difficult = "ffff00",
@@ -100,7 +100,7 @@ local STYLES = {
         span = "d9d9d9", selected = "242424",
         buttonBg = "1f1f1f", buttonEdge = "1f1f1f", buttonText = "e6e6e6",
         lfg = "LFG", lfgColor = "4fa3e0", marker = "line",
-        active = "33cc66", open = "ffcc33", done = "595959",
+        ready = "4fb0ff", active = "33cc66", open = "ffcc33", done = "595959",
         xpNow = "3d8fd9", xpPending = "ffcc33", xpTrack = "1f1f1f", ding = "33cc66",
         difficulty = {
             impossible = "ff1a1a", verydifficult = "ff8040", difficult = "ffff00",
@@ -119,7 +119,7 @@ local STYLES = {
         span = "dddddd", selected = "1a1a1a",
         buttonBg = "0d0d0d", buttonEdge = "333333", buttonText = "ffffff",
         lfg = "LFG", lfgColor = "33ffcc", marker = "dot",
-        active = "40bf40", open = "ffd200", done = "777777",
+        ready = "40c0ff", active = "40bf40", open = "ffd200", done = "777777",
         xpNow = "4040ff", xpPending = "33ffcc", xpTrack = "1a1a1a", ding = "33ffcc",
         difficulty = {
             impossible = "ff1a1a", verydifficult = "ff8040", difficult = "ffff00",
@@ -137,7 +137,7 @@ local STYLES = {
         span = "bfbfbf", selected = "262626",
         buttonBg = "1a1a1a", buttonEdge = "333333", buttonText = "e6e6e6",
         lfg = "\226\128\162", lfgColor = "7fb8d4", marker = "dot",
-        active = "7fd18f", open = "e6c35c", done = "595959",
+        ready = "7fbfe0", active = "7fd18f", open = "e6c35c", done = "595959",
         xpNow = "bfbfbf", xpPending = "e6c35c", xpTrack = "262626", ding = "7fd18f",
         difficulty = {
             impossible = "e05a4a", verydifficult = "e8894b", difficult = "e8d86a",
@@ -513,8 +513,7 @@ local DUNGEONS = {
 -- ------------------------------------------------------------
 local DUNGEON_QUESTS = {
     ["Blackfathom Deeps"] = {
-        { id = 6562, name = "Trouble in the Deeps", faction = "H", giver = "Tsunaman", where = "Stonetalon Mountains", x = 47, y = 64, mapID = 1442 },
-        { id = 6563, name = "The Essence of Aku'Mai", faction = "H", giver = "Je'neu Sancrea", where = "Ashenvale", x = 12, y = 34, mapID = 1440 },
+        { id = 6563, name = "The Essence of Aku'Mai", faction = "H", giver = "Je'neu Sancrea", where = "Ashenvale", x = 12, y = 34, mapID = 1440, chain = "Trouble in the Deeps", chainID = 6562, chainGiver = "Tsunaman", chainWhere = "Stonetalon Mountains", chainX = 47, chainY = 64, chainMapID = 1442, note = "The step before it, Trouble in the Deeps, is done outside: Tsunaman sends you to Je'neu Sancrea in Zoram'gar." },
         { id = 6564, name = "Allegiance to the Old Gods", faction = "H", chain = "Trouble in the Deeps", chainID = 6562, chainGiver = "Tsunaman", chainWhere = "Stonetalon Mountains", chainX = 47, chainY = 64, chainMapID = 1442 },
         { id = 971, name = "Knowledge in the Deeps", faction = "A", giver = "Gerrig Bonegrip", where = "Ironforge", x = 51, y = 6, mapID = 1455 },
         { id = 1198, name = "In Search of Thaelrid", faction = "A", giver = "Dawnwatcher Shaedlass", where = "Darnassus", x = 55, y = 25, mapID = 1457 },
@@ -757,6 +756,7 @@ local DEFAULTS = {
     hideOtherFaction = true,                -- hide the other side's quests
     hideCompleted = false,                  -- hide quests you have done
     lfgOnly = true,                         -- only what the Group Finder offers
+    openMap = false,                        -- open the world map on a click (see OpenMapAt)
     style = DEFAULT_STYLE,                  -- one of STYLE_ORDER
     bgAlpha = 0.75,                         -- 0 see-through, 1 solid
     -- fontSize is deliberately absent: nil means "whatever the client's own
@@ -849,6 +849,7 @@ local FACTION_TAG = {
 
 local STATUS_COLOR = {
     completed    = { label = "Completed",     r = 0.5, g = 0.5, b = 0.5 },
+    ready        = { label = "Ready to hand in", r = 0.4, g = 0.75, b = 1 },
     active       = { label = "Active",        r = 0.2, g = 1,   b = 0.2 },
     not_picked_up = { label = "Not picked up", r = 0.9, g = 0.9, b = 0.3 },
 }
@@ -880,6 +881,7 @@ local COMPLETED_ALPHA = 0.45
 local OUTSIDE = {
     [1489] = true, -- Hamuul Runetotem, before Leaders of the Fang
     [1490] = true, -- Nara Wildmane
+    [6562] = true, -- Trouble in the Deeps, before The Essence of Aku'Mai
 }
 
 local HAND_WRITTEN = {}
@@ -1201,6 +1203,27 @@ local plainClose = PlainButton(titleBar, "\195\151", 18, 18)
 plainClose:SetPoint("TOPRIGHT", -4, -3)
 plainClose:SetScript("OnClick", function() frame:Hide() end)
 
+-- The -/+ that folds the panel up to its title bar; see the Collapse section.
+-- On the frame rather than a local: the main chunks are at Lua's 200-local limit.
+frame.Collapse = { hidden = {} }
+frame.Collapse.button = PlainButton(titleBar, "-", 18, 18)
+frame.collapseButton = frame.Collapse.button
+
+function frame.Collapse.Paint()
+    local b = frame.Collapse.button
+    b:ClearAllPoints()
+    if Styled() then
+        b:SetPoint("RIGHT", plainClose, "LEFT", -2, 0)
+        PaintButton(b, true)
+    else
+        b:SetPoint("RIGHT", closeBtn, "LEFT", 2, 0)
+        b.fill:Hide()
+        b.label:SetTextColor(1, 0.82, 0)
+    end
+    local folded = DungeonLevelGuideDB and DungeonLevelGuideDB.collapsed
+    b.label:SetText(folded and "+" or (Styled() and "\226\136\146" or "-"))
+end
+
 local plainPlus = PlainButton(frame, "+", 20, 20)
 plainPlus:SetPoint("TOPLEFT", plusBtn, "TOPLEFT")
 local plainMinus = PlainButton(frame, "\226\136\146", 20, 20)
@@ -1243,6 +1266,8 @@ local function ApplyStyle()
     PaintButton(plainClose, true)
     PaintButton(plainPlus)
     PaintButton(plainMinus)
+    frame.Collapse.Paint()
+    frame.Collapse.HideBody()
 end
 
 -- ------------------------------------------------------------
@@ -1276,6 +1301,7 @@ local function RestoreFrame()
     if s then
         frame:SetSize(s.width, s.height)
     end
+    frame.Collapse.Apply()
 end
 
 -- ------------------------------------------------------------
@@ -1461,8 +1487,14 @@ local function SayMapStaysClosed()
     print(PREFIX .. "the map stays closed in combat or with the Controller UI -- open it yourself.")
 end
 
+-- A map opened from addon code keeps the addon's taint in the pins it
+-- draws, and the pool hands them out again: opening the map yourself in
+-- combat later then fails (SetPassThroughButtons gets blocked). So a click
+-- only opens it when openMap is on; otherwise the pin is set and the map
+-- left to the player.
 local function OpenMapAt(mapID)
     if not WorldMapFrame then return false end
+    if not DungeonLevelGuideDB.openMap then return true end
     if not MayOpenPanels() then
         SayMapStaysClosed()
         return true
@@ -2052,8 +2084,21 @@ local function ClientLFGInfo(d)
 end
 
 -- Reads quest status from the player's live quest log rather than a database
--- of our own, so this addon depends on nothing but the client.
+-- of our own, so this addon depends on nothing but the client. "ready" is in
+-- the log with its objectives done: ReadyForTurnIn is the question,
+-- IsComplete the fallback.
 function GetQuestStatus(questID)
+    local function ReadyForTurnIn()
+        for _, name in ipairs({ "ReadyForTurnIn", "IsComplete" }) do
+            local f = C_QuestLog and C_QuestLog[name]
+            if f then
+                local ok, ready = pcall(f, questID)
+                if ok then return ready and true or false end
+            end
+        end
+        return false
+    end
+
     if C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then
         local ok, done = pcall(C_QuestLog.IsQuestFlaggedCompleted, questID)
         if ok and done then return "completed" end
@@ -2061,10 +2106,15 @@ function GetQuestStatus(questID)
 
     if C_QuestLog and C_QuestLog.IsOnQuest then
         local ok, active = pcall(C_QuestLog.IsOnQuest, questID)
-        if ok and active then return "active" end
+        if ok and active then return ReadyForTurnIn() and "ready" or "active" end
     elseif GetQuestLogIndexByID then
         local idx = GetQuestLogIndexByID(questID)
-        if idx and idx > 0 then return "active" end
+        if idx and idx > 0 then
+            -- Classic's isComplete is 1 for done and -1 for failed.
+            if not GetQuestLogTitle then return "active" end
+            local _, _, _, _, _, isComplete = GetQuestLogTitle(idx)
+            return isComplete == 1 and "ready" or "active"
+        end
     end
 
     return "not_picked_up"
@@ -2229,7 +2279,7 @@ function ShowQuestTooltip(row, q)
         local rootStatus = GetQuestStatus(q.chainID)
         if rootStatus == "completed" then
             GameTooltip:AddLine("The chain's first quest is already done.", 0.2, 1, 0.2)
-        elseif rootStatus == "active" then
+        elseif rootStatus == "active" or rootStatus == "ready" then
             GameTooltip:AddLine("The chain's first quest is in your log.", 0.2, 1, 0.2)
         end
     end
@@ -2253,7 +2303,8 @@ end
 -- show an indicator without the user hovering every row.
 local function HasActiveLinkedQuest(d)
     for _, q in ipairs(QuestsFor(d)) do
-        if GetQuestStatus(q.id) == "active" then
+        local status = GetQuestStatus(q.id)
+        if status == "active" or status == "ready" then
             return true
         end
     end
@@ -2275,7 +2326,7 @@ local function MetaText(d, style)
     return text
 end
 
-local STATUS_KEY = { active = "active", not_picked_up = "open", completed = "done" }
+local STATUS_KEY = { ready = "ready", active = "active", not_picked_up = "open", completed = "done" }
 
 local function DrawDungeonRow(row, d)
     row.dungeon, row.quest = d, nil
@@ -2489,6 +2540,7 @@ function RefreshList(levelOverride)
     end
 
     content:SetSize(width, math.max(listHeight, 1))
+    frame.Collapse.HideBody()
 end
 
 -- Applies both, then redraws: row heights depend on the font size.
@@ -2557,6 +2609,16 @@ local function RefreshPanel(panel)
     panel.faction:SetChecked(DungeonLevelGuideDB.hideOtherFaction)
     panel.done:SetChecked(DungeonLevelGuideDB.hideCompleted)
     panel.lfgOnly:SetChecked(DungeonLevelGuideDB.lfgOnly)
+    panel.openMap:SetChecked(DungeonLevelGuideDB.openMap)
+    -- The Controller UI keeps the map closed whatever the box says.
+    -- Hidden rather than disabled: the Controller UI's cursor still lands on a
+    -- disabled button, and clicking it froze the game.
+    local bar = GamepadMainActionBarFrame
+    local controller = (GamepadCinematicSkipButton or (bar and bar.IsShown and bar:IsShown())) and true or false
+    panel.openMap:SetShown(not controller)
+    panel.openMapLabel:SetText(controller and "Open the map on a click -- not with the Controller UI"
+        or "Open the map on a click (can cause blocked-action errors)")
+    panel.openMapLabel:SetTextColor(controller and 0.5 or 1, controller and 0.5 or 1, controller and 0.5 or 1)
     panel.rangeLabel:SetText(("Margin when widened: +/- %d"):format(
         DungeonLevelGuideDB.range or DEFAULT_RANGE))
     panel.fontLabel:SetText(("Text size: %d"):format(FontSize()))
@@ -2642,6 +2704,9 @@ local function BuildControls(panel, prefix, top)
     panel.lfgOnly = Checkbox(panel, prefix .. "LFGOnlyCheck", "Only what the Group Finder shows (untick to widen)",
         top - 52, function(on) DungeonLevelGuideDB.lfgOnly = on end)
 
+    panel.openMap, panel.openMapLabel = Checkbox(panel, prefix .. "OpenMapCheck", "Open the map on a click (can cause blocked-action errors)",
+        top - 78, function(on) DungeonLevelGuideDB.openMap = on end)
+
     -- Three identical rows: a label on the left, - and + on the right. The
     -- labels are deliberately NOT tracked for font size -- the options panel
     -- has a fixed height, so it must not grow with the setting it controls.
@@ -2669,25 +2734,25 @@ local function BuildControls(panel, prefix, top)
         end)
     end
 
-    Stepper("rangeLabel", top - 86, 1,
+    Stepper("rangeLabel", top - 112, 1,
         function() return DungeonLevelGuideDB.range or DEFAULT_RANGE end,
         SetRange)
-    Stepper("fontLabel", top - 110, 1, FontSize, SetFontSize)
-    Stepper("alphaLabel", top - 134, 5,
+    Stepper("fontLabel", top - 136, 1, FontSize, SetFontSize)
+    Stepper("alphaLabel", top - 160, 5,
         function() return (DungeonLevelGuideDB.bgAlpha or 0.75) * 100 end,
         SetBackgroundAlpha)
 
     local styleLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    styleLabel:SetPoint("TOPLEFT", 14, top - 160)
+    styleLabel:SetPoint("TOPLEFT", 14, top - 186)
     styleLabel:SetText("Style")
-    panel.styleDropdown = StyleDropdown(panel, 58, top - 155, function(name)
+    panel.styleDropdown = StyleDropdown(panel, 58, top - 181, function(name)
         SetStyle(name)
         RefreshGUI()
     end)
 
     -- Separate lines rather than one wrapping paragraph: the panel has a
     -- fixed height, so the text has to have a predictable one too.
-    local statusY = top - 190
+    local statusY = top - 216
     for _, key in ipairs({ "statusDungeons", "statusLFG", "statusQuests" }) do
         local line = panel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         line:SetPoint("TOPLEFT", 14, statusY)
@@ -2704,7 +2769,7 @@ end
 
 local function BuildGUI()
     gui = CreateFrame("Frame", "DungeonLevelGuideConfigFrame", UIParent)
-    gui:SetSize(340, 311)
+    gui:SetSize(340, 337)
     gui:SetPoint("CENTER")
     gui:SetMovable(true)
     gui:SetClampedToScreen(true)
@@ -2782,12 +2847,14 @@ end
 local function RegisterSettingsPage()
     if settingsCategory then return end
     local page = CreateFrame("Frame")
+    -- A new frame starts shown, so the panel showing it the first time is no
+    -- change and OnShow, which fills in the values, would not run.
+    page:Hide()
     page.name = "Dungeon Level Guide"
+    -- Built now rather than in OnShow: creating the controls while the panel
+    -- was showing the page froze the game with the Controller UI.
+    BuildSettingsPage(page)
     page:SetScript("OnShow", function(self)
-        if not self.built then
-            self.built = true
-            BuildSettingsPage(self)
-        end
         RefreshPanel(self)
     end)
 
@@ -3197,7 +3264,7 @@ ns.ClearMarker = ClearMarker
 -- ------------------------------------------------------------
 -- Docking
 --
--- The panels of DungeonLevelGuide, PendingQuestXP and ZoneLevelGuide snap
+-- The panels of DungeonLevelGuide, TurnInQueue and ZoneLevelGuide snap
 -- together when one is dropped within SNAP pixels of another's edge, and
 -- then move as one: the upper (or left) panel carries the one below (or to
 -- its right) by anchoring it. Dragging a docked panel pulls it loose, taking
@@ -3213,7 +3280,7 @@ ns.ClearMarker = ClearMarker
 -- One table rather than a dozen locals: the main chunk of a WoW addon may
 -- hold no more than 200, and DungeonLevelGuide is close to that.
 local Dock = {
-    FRAMES = { "DungeonLevelGuideFrame", "PendingQuestXPFrame", "ZoneLevelGuideFrame" },
+    FRAMES = { "DungeonLevelGuideFrame", "TurnInQueueFrame", "ZoneLevelGuideFrame" },
     SNAP = 12,
     GAP = 4,
     REDOCK_TOLERANCE = 2,
@@ -3375,6 +3442,74 @@ titleBar:SetScript("OnDragStart", function() Dock.BeginDrag(frame) end)
 titleBar:SetScript("OnDragStop", function()
     Dock.EndDrag(frame)
     SavePosition()
+end)
+
+-- ------------------------------------------------------------
+-- Collapse
+--
+-- Folds the panel up to its title bar, like Blizzard's quest tracker. What
+-- is below the title is hidden rather than clipped, so nothing folded away
+-- can be clicked; a redraw that shows something again is undone by
+-- HideBody. (Copied between the three addons.)
+-- ------------------------------------------------------------
+
+function frame.Collapse.HideBody()
+    if not (DungeonLevelGuideDB and DungeonLevelGuideDB.collapsed) then return end
+    for _, child in ipairs({ frame:GetChildren() }) do
+        if child ~= titleBar and child:IsShown() then
+            child:Hide()
+            frame.Collapse.hidden[child] = true
+        end
+    end
+    for _, region in ipairs({ frame:GetRegions() }) do
+        if region:GetObjectType() == "FontString" and region:IsShown() then
+            region:Hide()
+            frame.Collapse.hidden[region] = true
+        end
+    end
+end
+
+-- The resize bounds would otherwise stop the panel at its minimum height.
+function frame.Collapse.SetMinHeight(height)
+    if frame.GetResizeBounds then
+        local minW, _, maxW, maxH = frame:GetResizeBounds()
+        frame:SetResizeBounds(minW, height, maxW, maxH)
+    elseif frame.SetMinResize then
+        frame:SetMinResize((frame:GetMinResize()), height)
+    end
+end
+
+function frame.Collapse.Apply()
+    local db = DungeonLevelGuideDB
+    if not db then return end
+    frame.Collapse.Paint()
+    if not frame.Collapse.minHeight then
+        local _, minHeight = Dock.Bounds(frame)
+        frame.Collapse.minHeight = minHeight
+    end
+    local barHeight = titleBar:GetHeight()
+    if db.collapsed then
+        -- Anchored by its top-left corner, so it folds upward.
+        if not Dock.Parent(frame) then Dock.Detach(frame) end
+        local height = frame:GetHeight() or 0
+        if height > barHeight + 20 then db.expandedHeight = height end
+        frame.Collapse.SetMinHeight(barHeight)
+        frame.Collapse.HideBody()
+        frame:SetHeight(barHeight)
+    elseif frame.Collapse.folded then
+        if not Dock.Parent(frame) then Dock.Detach(frame) end
+        for region in pairs(frame.Collapse.hidden) do region:Show() end
+        frame.Collapse.hidden = {}
+        frame.Collapse.SetMinHeight(frame.Collapse.minHeight)
+        frame:SetHeight(db.expandedHeight or (db.size and db.size.height) or 340)
+    end
+    frame.Collapse.folded = db.collapsed and true or false
+end
+
+frame.Collapse.button:SetScript("OnClick", function()
+    DungeonLevelGuideDB.collapsed = not DungeonLevelGuideDB.collapsed or nil
+    frame.Collapse.Apply()
+    RefreshList()
 end)
 
 resizeGrip:SetScript("OnMouseDown", function()
@@ -3574,6 +3709,12 @@ SlashCmdList["DUNGEONLEVELGUIDE"] = function(msg)
             print(PREFIX .. "showing every quest, both factions.")
         end
 
+    elseif msg == "map" then
+        DungeonLevelGuideDB.openMap = not DungeonLevelGuideDB.openMap
+        RefreshGUI()
+        print(PREFIX .. (DungeonLevelGuideDB.openMap and "a click opens the map."
+            or "a click only sets the pin; open the map yourself."))
+
     elseif msg == "done" then
         DungeonLevelGuideDB.hideCompleted = not DungeonLevelGuideDB.hideCompleted
         RefreshList()
@@ -3638,6 +3779,7 @@ SlashCmdList["DUNGEONLEVELGUIDE"] = function(msg)
         print("  /dlg faction      - show or hide the other faction's quests")
         print("  /dlg widen        - add the +/- margin to what the Group Finder shows, or go back")
         print("  /dlg done         - show or hide quests you have already done")
+        print("  /dlg map          - open the map on a click, or only set the pin")
         print("  /dlg clear        - remove the map marker")
         print("  /dlg lfg          - report what this client has of the Group Finder API")
         print("  /dlg levels       - mob levels measured inside dungeons (/dlg levels reset clears them)")

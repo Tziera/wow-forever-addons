@@ -13,15 +13,24 @@ quests that start in each zone: where, from whom, and at what level.
   shows zones up to n levels outside their range. The other faction's zones
   are hidden.
 - **Quests per zone.** `+` in front of a zone expands its quests. Click a
-  zone to open the map on it. Click a quest to put a pin where it is picked
-  up. A book that is handed in somewhere else is listed in the zone where
+  zone to open the map on it (with `/zlg map` on). Click a quest to put a
+  pin where it is picked up. A book that is handed in somewhere else is listed in the zone where
   the book lies, in each zone when it lies in several (`Books.lua`, by the
   quest's title, so either side's quest finds it): click pins the book,
   nearest first, ctrl-click the one who takes it. A book whose quest is not
   recorded yet for your side is listed anyway, handed in to Garion Wendell
-  or Owen Thadd. The
+  or Owen Thadd. A quest that starts from an item is listed where the item
+  drops or lies, by Questie's data, with who drops it in the tooltip; when it
+  is in a few places (Chen's Empty Keg, Owatanka), click pins the nearest, and clicking again the next. The
   same goes for quests that only hint at where they are handed in, such as
-  a treasure hunt: once the place is known, ctrl-click marks it.
+  a treasure hunt: once the place is known, ctrl-click marks it. Likewise
+  for someone a quest sends you to find who has no map marker, such as
+  Mankrik's wife for Lost in Battle.
+- **The map opens only if you ask for it.** A click sets the pin and the
+  arrow; open the map yourself with M. With `/zlg map` (or the checkbox in
+  the options) a click opens the map too, but a map opened by an addon
+  carries its taint in the pins it draws, and opening the map yourself in
+  combat later can then give a "blocked from an action" error.
 - **Quests are recorded when you take them.** The quest giver, the quest
   level, the zone, the coordinates and the faction are saved on accept. Quests
   that start from an item are marked as such. Dungeon quests get a dungeon
@@ -30,20 +39,27 @@ quests that start in each zone: where, from whom, and at what level.
   where an NPC takes an item and the quest is done at once, is recorded when
   you hand it in, with that NPC as its giver.
 - **Quest data included.** The addon ships with quests recorded in the
-  Forever beta, and with Classic quests not yet seen in Forever. The Classic
-  ones are marked `(preliminary)`. A quest you record yourself always wins
-  over the shipped data.
+  Forever beta, and with quests from [Questie](https://github.com/Questie/QuestieDB)'s
+  Forever data not yet recorded. Those are marked `(preliminary)`. A quest you
+  record yourself always wins over the shipped data.
+- **Only what you can take.** A quest that Questie says needs an earlier
+  quest stays hidden until that one is handed in, so the list shows the start
+  of each chain and not every step. A chain recorded in play wins over
+  Questie's, except that when Questie says several quests are all needed and
+  the recording names one of them, the rest are still needed too. With chain
+  help on, every quest shows.
 - **Chains and requirements.** `(chain)` means another quest must be done
   first, and the tooltip follows the chain back to where it starts.
   `(needs)` means something else is required, such as an item, or that
-  handing in another quest unlocks it without it being a chain. `(either)`
+  handing in another quest (or several) unlocks it without it being a chain. `(either)`
   means only one of two quests can be done. A quest that points you on to
   another, without the other needing it, says so in its tooltip. `(repeatable)` means it
   can be handed in again and again. Class and profession quests are
   labelled, and profession quests fade if you lack the profession.
   Legacy rewards, handed out at innkeepers, are marked `(legacy 15)` and
   stay hidden until your account reaches that level on the Legacy Track.
-- **Help find quest chains** (off by default). When a quest is offered
+- **Help find quest chains** (off by default). Every quest shows, also
+  those Questie says need an earlier quest; the tooltip names it. When a quest is offered
   straight after you hand in another one, it is probably the next step of a
   chain. Tick "Help find quest chains" under Options → AddOns, or type
   `/zlg chains`, and such quests are marked `(chain?)`. Right-click one to
@@ -52,6 +68,24 @@ quests that start in each zone: where, from whom, and at what level.
   `WTF/Account/<account>/<realm>/<character>/SavedVariables/ZoneLevelGuide.lua`.
   To have them included in the next release, email that file to
   wowtziera@gmail.com.
+- **Search.** Type two letters or more in the box under the level row and
+  the list shows every quest whose title, giver, zone, profession, class,
+  holiday or needed item matches (`Call of Water`, `Brine`, `Stonetalon`,
+  `Leatherworking`), from every zone, with the zone as a tag. Hover the box
+  for examples. Quests too high or grey for you are faded, and one
+  whose chain you have not reached says `(after …)`. Escape empties the box.
+- **Your class quests** are also gathered under your class's name, at the
+  top of the list, while one of them is open within your level window. Chains
+  such as Call of Water then read in one place; each quest still shows in its
+  own zone too. Holidays get the same kind of group while they are on:
+  Hallow's End, Feast of Winter Veil, Lunar Festival and Love is in the Air,
+  read from the game's calendar (or the usual dates when it does not answer).
+- **Your professions' quests** get a group each at the bottom of the list,
+  and Cooking, First Aid and Fishing share one, "Secondary Skills". A
+  quest that needs more skill than you have is red, with the skill it needs
+  after the title (`Thick Hides [105]`); one more than 10 points above you
+  is hidden. `/zlg skill` hides all of those above your skill instead. The
+  skill requirements come from Questie's data.
 - **Cities** appear as their own rows when they have a quest you have not
   handed in, at most five levels above yours. Grey quests count only while
   "Low-Level Quests" is ticked in the minimap's tracking menu.
@@ -59,12 +93,14 @@ quests that start in each zone: where, from whom, and at what level.
   in, or can never take again (otherwise they fade), `/zlg high` hides quests more than five levels
   above you, `/zlg profession` hides quests for a profession you don't
   have (otherwise they fade), and `/zlg steps` shows only the next step of
-  each chain: a later step stays hidden until the one before it is handed in. If "Low-Level Quests" is unticked in the minimap's
+  each chain even with chain help on: a later step stays hidden until the one before it is handed in. If "Low-Level Quests" is unticked in the minimap's
   tracking menu, grey quests are hidden too, just like on the map, except
   the ones in your quest log.
+- The −/+ beside the close button folds the panel up to its title bar, like
+  Blizzard's quest tracker, and unfolds it to the height it had.
 - Seven looks: `warm` (default), `flat`, `blizzard` and `minimal`, plus
   `elvui`, `details` and `pfui` to match those addons.
-- Snaps to Dungeon Level Guide and Pending Quest XP: drop one panel within a
+- Snaps to Dungeon Level Guide and Turn-In Queue: drop one panel within a
   few pixels of another's edge and they move together.
 
 ## Commands
@@ -75,10 +111,12 @@ quests that start in each zone: where, from whom, and at what level.
 | `/zlg range <n>` | Also show zones up to n levels outside their range |
 | `/zlg faction` | Show/hide the other faction's zones |
 | `/zlg done` | Show/hide quests you have handed in |
+| `/zlg map` | Open the map on a click, or only set the pin (default) |
 | `/zlg high` | Show/hide quests more than 5 levels above you |
 | `/zlg profession` | Show/hide quests for professions you don't have |
-| `/zlg steps` | Show only the next step of each chain, or every step |
-| `/zlg chains` | Turn chain help on or off: mark quests that may follow another |
+| `/zlg skill` | Show/hide profession quests above your skill (otherwise red, up to 10 above) |
+| `/zlg steps` | With chain help on: show only the next step of each chain, or every step |
+| `/zlg chains` | Turn chain help on or off: show every quest, and mark ones that may follow another |
 | `/zlg quests` | List the quests recorded this session, marked new/known/news |
 | `/zlg after [id] <quest>` | Note that a quest comes after another one (without an id: the last quest taken) |
 | `/zlg needs [id] <text>` | Note what a quest requires, e.g. an item |
@@ -91,9 +129,7 @@ it. Settings and recorded quests are saved per character.
 
 ## Installation
 
-Put the `ZoneLevelGuide` folder in
-`World of Warcraft/_classic_beta_/Interface/AddOns/` (or the Forever client's
-own `Interface/AddOns/` folder once it is released).
+Put the `ZoneLevelGuide` folder in `World of Warcraft/_forever_/Interface/AddOns/`.
 
 ## Credits and licence
 

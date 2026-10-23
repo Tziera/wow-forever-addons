@@ -1,0 +1,16 @@
+## Interface: 16001
+## Title: HealerMana
+## Notes: Shows the mana of the healers in your group or raid, one bar for each healer.
+## Author: Tziera
+## Version: 1.0.0
+## IconTexture: Interface\AddOns\HealerMana\icon
+## X-License: GPL-3.0-or-later
+# Sacrificial first line: the beta client appears to drop whichever
+# SavedVariables directive comes first. HealerManaScratchDB is never touched
+# by the code -- it exists so the real one below is not the first.
+## SavedVariables: HealerManaScratchDB
+## SavedVariablesPerCharacter: HealerManaDB
+
+# Interface number derived from the client's 1.60.1 -- see README.md.
+
+HealerMana.lua
