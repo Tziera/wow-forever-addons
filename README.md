@@ -13,7 +13,7 @@ next to another and they snap and move as one.
 | <img src="images/logo-tiq.png" width="64"> | [Turn-In Queue](TurnInQueue/README.md) | A turn-in queue for completed quests that shows whether handing them all in is enough to level up. |
 | <img src="images/logo-hqt.png" width="64"> | [Hide Quest Tracker](HideQuestTracker/README.md) | Fades the quest tracker out in combat, and lets clicks pass through it until it is back. |
 | <img src="images/logo-sqt.png" width="64"> | [Sort Quest Tracker](SortQuestTracker/README.md) | Puts the quests where you are first in the tracker, by level or by distance. |
-| <img src="images/logo-hm.png" width="64"> | [HealerMana](HealerMana/README.md) | The mana of the healers in your group or raid, one bar for each. |
+| <img src="images/logo-hm.png" width="64"> | [Healer Mana](HealerMana/README.md) | The mana of the healers in your group or raid, one bar for each. |
 
 ## Installation
 

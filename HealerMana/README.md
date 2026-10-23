@@ -1,4 +1,4 @@
-# HealerMana
+# Healer Mana
 
 Shows the mana of the healers in your group or raid in **WoW: Forever**, one
 bar for each healer, so the tank or raid leader can tell at a glance whether

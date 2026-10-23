@@ -1,5 +1,5 @@
 ## Interface: 16001
-## Title: HealerMana
+## Title: Healer Mana
 ## Notes: Shows the mana of the healers in your group or raid, one bar for each healer.
 ## Author: Tziera
 ## Version: 1.0.0

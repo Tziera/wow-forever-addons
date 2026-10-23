@@ -710,7 +710,7 @@ end)
 local function BuildSettingsPage(page)
     local heading = page:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     heading:SetPoint("TOPLEFT", 16, -16)
-    heading:SetText("HealerMana")
+    heading:SetText("Healer Mana")
 
     local boxes = {}
     local function Checkbox(key, text, y, onClick)
@@ -784,7 +784,7 @@ local function RegisterSettingsPage()
     settingsRegistered = true
     local page = CreateFrame("Frame")
     page:Hide()
-    page.name = "HealerMana"
+    page.name = "Healer Mana"
     BuildSettingsPage(page)
     page:SetScript("OnShow", function(self) self.refresh() end)
     ns.settingsPage = page
