@@ -10,9 +10,7 @@ Shows your quest progress on the nameplates of the mobs you still need in
   you don't need for any quest gets no text.
 - **Names what to loot.** A kill objective for the mob itself reads
   `Kill 5/8`, since the plate already carries its name; anything else keeps
-  its own name, such as `Cirrusfly Wing 3/10`. On an NPC you cannot attack,
-  such as one you are sent to speak with, it reads `Talk 0/1` (with friendly
-  nameplates turned on).
+  its own name, such as `Cirrusfly Wing 3/10`.
 - **Your progress in a group.** When others in the group do the same quest,
   only your objectives are shown. `/qpp party on` adds theirs after yours,
   greyed and by name: `Brightwell: Kill 2/8`.
