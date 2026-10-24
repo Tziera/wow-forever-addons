@@ -1,6 +1,6 @@
 # WoW: Forever addons
 
-Six small addons for **WoW: Forever**. The three panels, Zone Level Guide,
+Seven small addons for **WoW: Forever**. The three panels, Zone Level Guide,
 Dungeon Level Guide and Turn-In Queue, are built to work together: drop one
 next to another and they snap and move as one.
 
@@ -14,6 +14,7 @@ next to another and they snap and move as one.
 | <img src="images/logo-hqt.png" width="64"> | [Hide Quest Tracker](HideQuestTracker/README.md) | Fades the quest tracker out in combat, and lets clicks pass through it until it is back. |
 | <img src="images/logo-sqt.png" width="64"> | [Sort Quest Tracker](SortQuestTracker/README.md) | Puts the quests where you are first in the tracker, by level or by distance. |
 | <img src="images/logo-hm.png" width="64"> | [Healer Mana](HealerMana/README.md) | The mana of the healers in your group or raid, one bar for each. |
+| <img src="images/logo-qpp.png" width="64"> | [Quest Plate Progress](QuestPlateProgress/README.md) | Your quest progress on the nameplates of the mobs you still need: `Kill 5/8`, `Cirrusfly Wing 3/10`. |
 
 ## Installation
 
