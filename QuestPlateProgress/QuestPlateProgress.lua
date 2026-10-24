@@ -108,9 +108,17 @@ local function TooltipLines(unit)
     return lines
 end
 
+-- An NPC you cannot attack, such as one a quest sends you to speak with.
+-- Unknown counts as attackable.
+local function IsFriendly(unit)
+    if not UnitCanAttack then return false end
+    local ok, canAttack = pcall(UnitCanAttack, "player", unit)
+    return ok and canAttack == false
+end
+
 -- The objectives on this unit that are not finished yet, one per line.
--- A kill objective for the mob itself is shown as "Kill 5/8", since the
--- plate already carries the name.
+-- An objective for the unit itself is shown as "Kill 5/8", or "Talk 0/1" on
+-- one you cannot attack, since the plate already carries the name.
 --
 -- In a group the tooltip names each member doing the quest, with that
 -- member's objectives under the name. Yours come first; the others' only
@@ -122,6 +130,7 @@ local function ProgressText(unit)
     local unitName = UnitName and UnitName(unit)
     if IsSecret(unitName) then unitName = nil end
     local me = UnitName and UnitName("player")
+    local own = IsFriendly(unit) and "Talk %d/%d" or "Kill %d/%d"
     local who
     for _, line in ipairs(TooltipLines(unit)) do
         if line.type == QUEST_TITLE_LINE then
@@ -132,7 +141,7 @@ local function ProgressText(unit)
         elseif line.objective ~= false then
             local name, done, needed = ParseObjective(line.text)
             if name and done and needed and done < needed then
-                local text = name == unitName and ("Kill %d/%d"):format(done, needed)
+                local text = name == unitName and own:format(done, needed)
                     or ("%s %d/%d"):format(name, done, needed)
                 if not who then
                     table.insert(mine, text)
