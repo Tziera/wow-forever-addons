@@ -146,3 +146,6 @@ By Tziera. Licensed under the GNU General Public License v3.0 or later, see
 - The fonts in `Fonts/` are Alegreya Sans, Barlow Semi Condensed, Cinzel,
   PT Sans Narrow and Source Sans 3, under the SIL Open Font License. Their
   licence files are included in that folder.
+
+Special thanks to **Zulakbar the hunter**, who sent in more quests from the
+Forever beta than anyone else.
