@@ -21,6 +21,10 @@ Shows your quest progress on the nameplates of the mobs you still need in
   objectives it counts towards; the addon reads that list for each plate.
 - A settings page under *Esc → Options → AddOns*.
 
+**Not in dungeons yet.** Inside dungeons the game keeps from addons what this
+one reads, so no progress shows there for now. Making it work in dungeons is
+a goal for a later version.
+
 ## Commands
 
 | Command | Does |
