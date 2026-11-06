@@ -125,19 +125,33 @@ end
 -- with showParty, greyed and named.
 local PARTY_COLOR = "|cffb0b0b0"
 
+-- A name line as a bare lower-case name: no colour codes, realm or padding.
+local function PlainName(text)
+    if type(text) ~= "string" or IsSecret(text) then return nil end
+    text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")
+    text = text:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%-.*$", "")
+    if text == "" then return nil end
+    return text:lower()
+end
+
 local function ProgressText(unit)
     local mine, party = {}, {}
     local unitName = UnitName and UnitName(unit)
     if IsSecret(unitName) then unitName = nil end
-    local me = UnitName and UnitName("player")
+    local me = PlainName(UnitName and UnitName("player"))
     local own = IsFriendly(unit) and "Talk %d/%d" or "Kill %d/%d"
     local who
     for _, line in ipairs(TooltipLines(unit)) do
         if line.type == QUEST_TITLE_LINE then
             who = nil
         elseif line.type == QUEST_PLAYER_LINE then
-            who = type(line.text) == "string" and not IsSecret(line.text) and line.text:gsub("%-.*$", "") or "?"
-            if who == me then who = nil end
+            local name = PlainName(line.text)
+            -- Forever names you with your surname too: "Tziera Rootmender".
+            if name and me and (name == me or name:sub(1, #me + 1) == me .. " ") then
+                who = nil
+            else
+                who = name and line.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("%-.*$", "") or "?"
+            end
         elseif line.objective ~= false then
             local name, done, needed = ParseObjective(line.text)
             if name and done and needed and done < needed then
@@ -493,7 +507,8 @@ end
 -- variables so it can be read outside the game after a /reload.
 local function Describe(value)
     if IsSecret(value) then return "<secret>" end
-    return tostring(value)
+    -- Escaped so colour codes show up instead of colouring the line.
+    return (tostring(value):gsub("|", "||"))
 end
 
 local function Debug(unit)
@@ -503,6 +518,7 @@ local function Debug(unit)
         local version, build = GetBuildInfo()
         Add("QuestPlateProgress debug, build %s (%s)", tostring(build), tostring(version))
     end
+    Add("player %s", Describe(UnitName and UnitName("player")))
     Add("unit %s, exists %s, name %s", unit, Describe(UnitExists and UnitExists(unit)),
         Describe(UnitName and UnitName(unit)))
     Add("C_TooltipInfo.GetUnit %s, C_NamePlate.GetNamePlateForUnit %s",
