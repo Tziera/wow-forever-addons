@@ -2,7 +2,7 @@
 ## Title: Quest Plate Progress
 ## Notes: Shows quest progress on the nameplates of mobs you still need, e.g. "Kill 5/8" or "Cirrusfly Wing 3/10".
 ## Author: Tziera
-## Version: 1.0.0
+## Version: 1.0.1
 ## IconTexture: Interface\AddOns\QuestPlateProgress\icon
 ## X-License: GPL-3.0-or-later
 # Sacrificial first line: the beta client appears to drop whichever
