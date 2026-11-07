@@ -26,7 +26,7 @@ into `World of Warcraft/_forever_/Interface/AddOns/`.
 Bug reports and ideas are welcome as issues. Zone Level Guide records the
 quests you take and can help map Forever's quest chains: turn on **Help find
 quest chains** in its settings, play, and email your
-`WTF/Account/<account>/<realm>/<character>/SavedVariables/ZoneLevelGuide.lua`
+`WTF/Account/<account>/SavedVariables/ZoneLevelGuide.lua`
 to **wowtziera@gmail.com**. Your quests and answers go into the next release.
 
 ## Licence

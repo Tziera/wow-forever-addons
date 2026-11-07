@@ -65,7 +65,7 @@ quests that start in each zone: where, from whom, and at what level.
   `/zlg chains`, and such quests are marked `(chain?)`. Right-click one to
   answer: "Yes, it comes after …", "No, but … unlocked it" or "Not a chain". Your answers are saved
   with your recorded quests, in
-  `WTF/Account/<account>/<realm>/<character>/SavedVariables/ZoneLevelGuide.lua`.
+  `WTF/Account/<account>/SavedVariables/ZoneLevelGuide.lua`.
   To have them included in the next release, email that file to
   wowtziera@gmail.com.
 - **Search.** Type two letters or more in the box under the level row and
@@ -117,7 +117,7 @@ quests that start in each zone: where, from whom, and at what level.
 | `/zlg skill` | Show/hide profession quests above your skill (otherwise red, up to 10 above) |
 | `/zlg steps` | With chain help on: show only the next step of each chain, or every step |
 | `/zlg chains` | Turn chain help on or off: show every quest, and mark ones that may follow another |
-| `/zlg quests` | List the quests recorded this session, marked new/known/news |
+| `/zlg quests` | List the quests recorded on this account, marked new/known/news |
 | `/zlg after [id] <quest>` | Note that a quest comes after another one (without an id: the last quest taken) |
 | `/zlg needs [id] <text>` | Note what a quest requires, e.g. an item |
 | `/zlg style <name>` | `warm`, `flat`, `blizzard`, `elvui`, `details`, `pfui` or `minimal` |
@@ -125,7 +125,9 @@ quests that start in each zone: where, from whom, and at what level.
 | `/zlg reset` | Put the panel back in its default position and size |
 
 Drag the title bar to move the panel, and the bottom-right corner to resize
-it. Settings and recorded quests are saved per character.
+it. Recorded quests and your answers about chains are saved for the account,
+so an alt starts with what your other characters have seen. Settings and
+which quests you have handed in are saved per character.
 
 ## Installation
 

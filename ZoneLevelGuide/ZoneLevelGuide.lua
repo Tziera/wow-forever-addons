@@ -478,6 +478,33 @@ local DEFAULTS = {
 }
 
 local function EnsureDB()
+    -- Fills the fields the kept record lacks from the other, so a note made on
+    -- one character survives a newer recording on another.
+    local function MergeRecord(a, b)
+        local newer, older = a, b
+        if (b.taken or 0) > (a.taken or 0) then newer, older = b, a end
+        for key, value in pairs(older) do
+            if newer[key] == nil then newer[key] = value end
+        end
+        return newer
+    end
+
+    -- Recorded quests are kept for the account, so an alt starts with what the
+    -- others have seen. The character's own file holds the same table: should
+    -- the account file not come back, nothing is lost.
+    local function MergeQuests(own)
+        ZoneLevelGuideAccountDB = ZoneLevelGuideAccountDB or {}
+        local account = ZoneLevelGuideAccountDB
+        account.quests = account.quests or {}
+        if own and own ~= account.quests then
+            for id, q in pairs(own) do
+                local kept = account.quests[id]
+                account.quests[id] = kept and MergeRecord(kept, q) or q
+            end
+        end
+        return account.quests
+    end
+
     ZoneLevelGuideDB = ZoneLevelGuideDB or {}
     local db = ZoneLevelGuideDB
     for key, value in pairs(DEFAULTS) do
@@ -503,7 +530,7 @@ local function EnsureDB()
     -- find*: who or what the quest sends you to find, when the map does not show it; ctrl-click marks it.
     -- after = false: the chain was taken away, and harvest removes it too. needsQuest = false likewise.
     -- needsQuest/needsQuestTitle: one quest, or a list when several hand-ins are needed.
-    db.quests = db.quests or {}
+    db.quests = MergeQuests(db.quests)
     -- The latest hand-ins, newest first: { id, title }
     db.turnedIn = db.turnedIn or {}
     -- Every hand-in seen, for good: Forever does not flag them all completed.
@@ -1088,10 +1115,13 @@ end
 
 -- Forever's "Camping 101: Skinning" and its kin name their profession.
 -- `profession = false` in the shipped data means it was checked: none needed.
+-- Cooking's never needs it: that one sends you to learn it.
 local function TitleProfession(title, questID)
     local shipped = ns.RECORDED_QUESTS and ns.RECORDED_QUESTS[questID]
     if shipped and shipped.profession == false then return nil end
-    return type(title) == "string" and title:match("^Camping 101: (.+)$") or nil
+    local profession = type(title) == "string" and title:match("^Camping 101: (.+)$") or nil
+    if profession == "Cooking" then return nil end
+    return profession
 end
 
 local function RecordQuest(questID)
@@ -1626,11 +1656,13 @@ local function QuestsIn(zoneName, window, level)
                 hidden = hidden + 1
             elseif ZoneLevelGuideDB.hideDone and (QuestStatus(id) == "done" or ClosedForGood(q, id)) then
                 hidden = hidden + 1
-            elseif ZoneLevelGuideDB.hideProfession and Skills.Lacks(q) then
+            elseif ZoneLevelGuideDB.hideProfession and Skills.Lacks(q) and QuestStatus(id) ~= "active" then
+                -- One in your log stays: you took it, so it is yours to do.
                 hidden = hidden + 1
             elseif zoneName == Skills.SECONDARY_GROUP and Skills.Lacks(q) then
                 -- Not one of your secondary skills: not what the group is about.
-            elseif Skills.Gap(q, id) > Skills.REACH or (ZoneLevelGuideDB.hideAboveSkill and Skills.Gap(q, id) > 0) then
+            elseif QuestStatus(id) ~= "active"
+                and (Skills.Gap(q, id) > Skills.REACH or (ZoneLevelGuideDB.hideAboveSkill and Skills.Gap(q, id) > 0)) then
                 hidden = hidden + 1
             elseif (ZoneLevelGuideDB.hideChainSteps or not Chains.Helps())
                 and QuestStatus(id) == "open" and Chains.UnmetNeed(q, id) then
@@ -3625,6 +3657,11 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
     if event == "ADDON_LOADED" then
         if ... ~= ADDON_NAME then return end
         EnsureDB()
+        -- Friends.lua: on once, so a friend who turns it off keeps it off.
+        if ns.FRIENDS and not ZoneLevelGuideDB.friendsChainHelp then
+            ZoneLevelGuideDB.chainHelp, ZoneLevelGuideDB.friendsChainHelp = true, true
+            print(PREFIX .. "Help find quest chains is on: right-click a quest marked (chain?) to answer. /zlg chains turns it off.")
+        end
         QuestsChanged()
         RestoreFrame()
         ApplyLook()
@@ -3701,7 +3738,7 @@ local function QuestReport()
     for _ in pairs(ZoneLevelGuideDB.quests) do session = session + 1 end
     for _ in pairs(ns.RECORDED_QUESTS or {}) do harvested = harvested + 1 end
     local classicData = ns.CLASSIC_QUESTS or {}
-    print((PREFIX .. "%d quest%s recorded this session, %d harvested from earlier ones."):format(
+    print((PREFIX .. "%d quest%s recorded on this account, %d shipped with the addon."):format(
         session, session == 1 and "" or "s", harvested))
     local ids = {}
     for id in pairs(ZoneLevelGuideDB.quests) do table.insert(ids, id) end
@@ -3846,7 +3883,7 @@ SlashCmdList["ZONELEVELGUIDE"] = function(input)
         print("  /zlg profession   - show or hide quests for professions you don't have")
         print("  /zlg steps        - show only the next step of each chain, or every step")
         print("  /zlg chains       - help find quest chains: mark quests that may follow another")
-        print("  /zlg quests       - list the quests recorded this session")
+        print("  /zlg quests       - list the quests recorded on this account")
         print("  /zlg after <id>   - the quest you took last comes after quest <id>")
         print("  /zlg needs <text> - what the quest you took last needs, e.g. an item")
         print("  /zlg style <name> - blizzard, flat, warm, elvui, details, pfui or minimal")

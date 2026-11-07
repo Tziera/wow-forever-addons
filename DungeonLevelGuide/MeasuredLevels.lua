@@ -7,7 +7,10 @@
 local _, ns = ...
 
 ns.MEASURED_LEVELS = {
-    ["Ragefire Chasm"] = { min = 13, max = 16, atLow = 17, atHigh = 30 },
-    ["Ruins of Lordaeron"] = { min = 15, max = 20, atLow = 21, atHigh = 21 },
+    ["Blackfathom Deeps"] = { min = 22, max = 26, atLow = 26, atHigh = 26 },
+    ["Ragefire Chasm"] = { min = 13, max = 16, atLow = 13, atHigh = 30 },
+    ["Ruins of Lordaeron"] = { min = 15, max = 20, atLow = 21, atHigh = 24 },
+    ["Shadowfang Keep"] = { min = 18, max = 25, atLow = 25, atHigh = 25 },
     ["The Hall of Thanes"] = { min = 13, max = 16, atLow = 14, atHigh = 18 },
+    ["Wailing Caverns"] = { min = 17, max = 22, atLow = 20, atHigh = 20 },
 }
