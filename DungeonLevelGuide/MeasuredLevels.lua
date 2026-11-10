@@ -8,6 +8,7 @@ local _, ns = ...
 
 ns.MEASURED_LEVELS = {
     ["Blackfathom Deeps"] = { min = 22, max = 26, atLow = 26, atHigh = 26 },
+    ["Deadmines"] = { min = 16, max = 21, atLow = 22, atHigh = 22 },
     ["Ragefire Chasm"] = { min = 13, max = 16, atLow = 13, atHigh = 30 },
     ["Ruins of Lordaeron"] = { min = 15, max = 20, atLow = 21, atHigh = 24 },
     ["Shadowfang Keep"] = { min = 18, max = 25, atLow = 25, atHigh = 25 },
