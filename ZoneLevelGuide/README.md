@@ -153,4 +153,4 @@ By Tziera. Licensed under the GNU General Public License v3.0 or later, see
   licence files are included in that folder.
 
 Thanks to **Zulakbar the hunter** for the quests sent in from the Forever
-beta.
+beta and beyond.
