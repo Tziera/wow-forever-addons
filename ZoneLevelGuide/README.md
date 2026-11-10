@@ -80,6 +80,9 @@ quests that start in each zone: where, from whom, and at what level.
   own zone too. Holidays get the same kind of group while they are on:
   Hallow's End, Feast of Winter Veil, Lunar Festival and Love is in the Air,
   read from the game's calendar (or the usual dates when it does not answer).
+  The Darkmoon Faire's hand-ins are there too, but only when the calendar
+  shows the faire, and in the zone the calendar's text names: Elwynn Forest
+  south of Goldshire, or Mulgore below Thunder Bluff.
 - **Your professions' quests** get a group each at the bottom of the list,
   and Cooking, First Aid and Fishing share one, "Secondary Skills". A
   quest that needs more skill than you have is red, with the skill it needs

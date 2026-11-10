@@ -437,6 +437,9 @@ local ZONES = {
     ["Stormwind City"] = { side = "A", mapID = 1453, city = true },
     ["Ironforge"] = { side = "A", mapID = 1455, city = true },
     ["Darnassus"] = { side = "A", mapID = 1457, city = true },
+    -- Not a city, and not in the Group Finder either; listed the same way,
+    -- for its quests alone (the druids' trips there).
+    ["Moonglade"] = { mapID = 1450, city = true },
 }
 ns.ZONES = ZONES
 
@@ -594,7 +597,7 @@ end
 -- A holiday quest (`holiday = "Hallow's End"`) is shown only while the
 -- holiday is on. The calendar says so when it has today's events; otherwise
 -- the usual dates do. What was seen is kept in ZoneLevelGuideDB.holidayCheck.
-local Holiday = { checked = {} }
+local Holiday = { checked = {}, texts = {} }
 -- Classic's usual dates; the Lunar Festival follows the moon, so it gets a
 -- wide window.
 Holiday.DATES = {
@@ -619,6 +622,14 @@ function Holiday.FromCalendar(name)
             -- One name inside the other: "Winter Veil" is the Feast of Winter Veil.
             local title, wanted = event.title:lower(), name:lower()
             if title:find(wanted, 1, true) or wanted:find(title, 1, true) then
+                local text = event.title
+                if C_Calendar.GetHolidayInfo then
+                    local okInfo, info = pcall(C_Calendar.GetHolidayInfo, 0, now.monthDay, i)
+                    if okInfo and type(info) == "table" and type(info.description) == "string" then
+                        text = text .. " " .. info.description
+                    end
+                end
+                Holiday.texts[name] = text
                 return true, table.concat(seen, ", ")
             end
         end
@@ -649,9 +660,33 @@ function Holiday.IsOn(name)
     Holiday.checked[name] = { on = on, at = now }
     if ZoneLevelGuideDB then
         ZoneLevelGuideDB.holidayCheck = ZoneLevelGuideDB.holidayCheck or {}
-        ZoneLevelGuideDB.holidayCheck[name] = { on = on, source = source, calendar = seen, day = date("%Y-%m-%d") }
+        ZoneLevelGuideDB.holidayCheck[name] = { on = on, source = source, calendar = seen, day = date("%Y-%m-%d"),
+            text = on and Holiday.texts[name] or nil }
     end
     return on
+end
+
+-- A holiday that moves (the Darkmoon Faire) has a quest's other places in
+-- `holidayAt`. The calendar's text for the holiday names the zone it is in
+-- now; the zone named first wins. A town names its zone. Nothing named: the
+-- quest stays where it is.
+Holiday.TOWNS = { ["Elwynn Forest"] = { "Goldshire" }, ["Mulgore"] = { "Thunder Bluff" } }
+
+function Holiday.Place(name, places)
+    if not Holiday.IsOn(name) then return nil end
+    local text = Holiday.texts[name]
+    if type(text) ~= "string" then return nil end
+    text = text:lower()
+    local best, at
+    for _, place in ipairs(places) do
+        local words = { place.zone }
+        for _, town in ipairs(Holiday.TOWNS[place.zone] or {}) do table.insert(words, town) end
+        for _, word in ipairs(words) do
+            local found = text:find(word:lower(), 1, true)
+            if found and (not at or found < at) then best, at = place, found end
+        end
+    end
+    return best
 end
 
 -- Most holiday quests have level 60 whoever takes them: a filler, not a
@@ -1309,6 +1344,34 @@ local function AllQuests()
             all[id] = withItem
         end
     end
+    -- At the holiday's place this time, by the calendar. A recording keeps
+    -- Questie's other places.
+    for id, q in pairs(all) do
+        local classic = (ns.CLASSIC_QUESTS or {})[id]
+        local others = q.holidayAt or (classic and classic.holidayAt)
+        if q.holiday and others and q.zone then
+            local places = { { zone = q.zone, mapID = q.mapID, x = q.x, y = q.y } }
+            local listed = { [q.zone] = true }
+            local more = { others }
+            if classic and classic.holidayAt and classic.holidayAt ~= others then table.insert(more, classic.holidayAt) end
+            if classic and classic.zone then table.insert(more, { classic }) end
+            for _, list in ipairs(more) do
+                for _, place in ipairs(list) do
+                    if place.zone and not listed[place.zone] then
+                        listed[place.zone] = true
+                        table.insert(places, { zone = place.zone, mapID = place.mapID, x = place.x, y = place.y })
+                    end
+                end
+            end
+            local place = Holiday.Place(q.holiday, places)
+            if place and place.zone ~= q.zone then
+                local moved = {}
+                for k, v in pairs(q) do moved[k] = v end
+                moved.zone, moved.mapID, moved.x, moved.y, moved.listZone = place.zone, place.mapID, place.x, place.y, nil
+                all[id] = moved
+            end
+        end
+    end
     -- A book is listed where it lies, in each zone it lies in, not where it
     -- is handed in.
     local byZone = {}
@@ -1645,7 +1708,8 @@ local function QuestsIn(zoneName, window, level)
         -- class quest waits until you can take it, and another class's quests
         -- are never yours to take. None is hidden by a filter; they are just
         -- not what the row is about.
-        local questLevel = not (q.legacy or Holiday.NoLevel(q)) and q.level or nil
+        -- A book's level is the librarian's quest, not where the book lies.
+        local questLevel = not (q.legacy or Holiday.NoLevel(q) or IsBook(q)) and q.level or nil
         local inWindow = not window or Holiday.NoLevel(q)
             or (questLevel == nil and window[1] <= 0)
             or (questLevel and questLevel >= window[1] and questLevel <= window[2])
@@ -2395,7 +2459,7 @@ local function ShowZoneTooltip(row, zone)
         return
     end
     if zone.city then
-        GameTooltip:AddLine(("A city: listed for its quests at levels %d-%d"):format(zone.minLevel,
+        GameTooltip:AddLine(("Listed for its quests at levels %d-%d"):format(zone.minLevel,
             zone.maxLevel), 0.8, 0.8, 0.8)
     else
         GameTooltip:AddLine(("Level %d-%d (the Group Finder's range)"):format(zone.minLevel,
@@ -3072,7 +3136,7 @@ local function ShownZones(level)
         local low, high
         for _, q in ipairs((QuestsIn(name, window, level))) do
             -- Only a quest with a known level can say what the city spans.
-            if q.level and QuestStatus(q.id) ~= "done" then
+            if q.level and not IsBook(q) and QuestStatus(q.id) ~= "done" then
                 low = math.min(low or q.level, q.level)
                 high = math.max(high or q.level, q.level)
             end
@@ -3671,6 +3735,7 @@ eventFrame:SetScript("OnEvent", function(_, event, ...)
         if ZoneLevelGuideDB then SavePosition() end
     elseif event == "CALENDAR_UPDATE_EVENT_LIST" then
         Holiday.checked = {}
+        QuestsChanged()
         RefreshList()
     elseif event == "PLAYER_ENTERING_WORLD" or LFG_EVENTS[event] then
         -- The calendar has no events until it has been opened once.
