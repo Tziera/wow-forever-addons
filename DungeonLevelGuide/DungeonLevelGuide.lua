@@ -575,8 +575,8 @@ local DUNGEON_QUESTS = {
         { id = 168, name = "Collecting Memories", faction = "A", giver = "Wilder Thistlenettle", where = "Stormwind City", x = 65, y = 21, mapID = 1453 },
         { id = 167, name = "Oh Brother. . .", faction = "A", giver = "Wilder Thistlenettle", where = "Stormwind City", x = 65, y = 21, mapID = 1453 },
         { id = 2040, name = "Underground Assault", faction = "A", giver = "Shoni the Shilent", where = "Stormwind City", x = 56, y = 12, mapID = 1453 },
-        { id = 166, name = "The Defias Brotherhood", faction = "A", giver = "Gryan Stoutmantle", where = "Westfall", x = 56, y = 48, mapID = 1436 },
-        { id = 92753, name = "Destruction in Deadmines", faction = "A", note = "Plant the Extra-Destructive Explosives at the forge hidden inside, then meet Alba Fairmoon at the exit." },
+        { id = 166, name = "The Defias Brotherhood", faction = "A", giver = "Gryan Stoutmantle", where = "Westfall", x = 56, y = 48, mapID = 1436, chain = "The Defias Brotherhood", chainID = 65, chainGiver = "Gryan Stoutmantle", chainWhere = "Westfall", chainX = 56, chainY = 48, chainMapID = 1436 },
+        { id = 92753, name = "Destruction in Deadmines", faction = "A", giver = "Alba Fairmoon", where = "Westfall", x = 53, y = 53, mapID = 1436, chain = "Murloc Gills and Testing the Wells", chainID = 92744, chainGiver = "Alba Fairmoon", chainWhere = "Westfall", chainX = 53, chainY = 53, chainMapID = 1436, note = "Plant the Extra-Destructive Explosives at the forge hidden inside, then meet Alba Fairmoon at the exit." },
         { id = 373, name = "The Unsent Letter", faction = "A", inside = true, fromDrop = true, note = "Edwin VanCleef drops the letter. It opens a long Stormwind chain." },
     },
     ["Gnomeregan"] = {
@@ -770,7 +770,68 @@ local DEFAULTS = {
 -- only at ADDON_LOADED, so the table is never missing.
 local MOB_LEVELS_VERSION = 2
 
+-- What is learned in play -- dungeon quests and mob levels -- is kept for the
+-- account, so an alt starts with what the others have seen. The character's
+-- own file holds the same tables: should the account file not come back,
+-- nothing is lost. Settings stay per character.
 local function EnsureDB()
+    local function ShareWithAccount(db)
+        local SHARED_LEVELS = { "mobLevels", "looseLevels", "normalLevels" }
+
+        local function MergeRange(into, name, seen)
+            if type(seen) ~= "table" or type(seen.min) ~= "number" or type(seen.max) ~= "number" then return end
+            local have = into[name]
+            if not have then
+                into[name] = seen
+            elseif have ~= seen then
+                have.min = math.min(have.min, seen.min)
+                have.max = math.max(have.max, seen.max)
+                have.at = have.at or seen.at
+            end
+        end
+
+        local function MergeLearned(into, id, l)
+            local have = into[id]
+            if not have then into[id] = l return end
+            if have == l then return end
+            if l.confirmed and not have.confirmed then
+                have.dungeon, have.confirmed = l.dungeon, true
+            end
+            for key, value in pairs(l) do
+                if have[key] == nil then have[key] = value end
+            end
+        end
+
+        local function MergeMisses(into, name, miss)
+            local have = into[name]
+            if not have then into[name] = miss return end
+            if have == miss then return end
+            have.mobs = (have.mobs or 0) + (miss.mobs or 0)
+            have.unread = have.unread or {}
+            for key, count in pairs(miss.unread or {}) do
+                have.unread[key] = (have.unread[key] or 0) + count
+            end
+        end
+
+        DungeonLevelGuideAccountDB = DungeonLevelGuideAccountDB or {}
+        local account = DungeonLevelGuideAccountDB
+        if (account.mobLevelsVersion or 1) < MOB_LEVELS_VERSION then
+            account.mobLevels, account.looseLevels, account.normalLevels, account.mobMisses = {}, {}, {}, {}
+            account.mobLevelsVersion = MOB_LEVELS_VERSION
+        end
+        for _, key in ipairs(SHARED_LEVELS) do
+            account[key] = account[key] or {}
+            for name, seen in pairs(db[key] or {}) do MergeRange(account[key], name, seen) end
+            db[key] = account[key]
+        end
+        account.mobMisses = account.mobMisses or {}
+        for name, miss in pairs(db.mobMisses or {}) do MergeMisses(account.mobMisses, name, miss) end
+        db.mobMisses = account.mobMisses
+        account.learned = account.learned or {}
+        for id, l in pairs(db.learned or {}) do MergeLearned(account.learned, id, l) end
+        db.learned = account.learned
+    end
+
     DungeonLevelGuideDB = DungeonLevelGuideDB or {}
     local db = DungeonLevelGuideDB
 
@@ -805,6 +866,7 @@ local function EnsureDB()
     db.normalLevels = db.normalLevels or {}
     -- [questID] = { dungeon, confirmed, title, level, giver, zone, mapID, x, y, side }
     db.learned = db.learned or {}
+    ShareWithAccount(db)
 end
 
 EnsureDB()

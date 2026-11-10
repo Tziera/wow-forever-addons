@@ -62,7 +62,8 @@ to the map and the Group Finder.
 | `/dlg layout` | Show how the panel measured its text |
 
 Drag the title bar to move the panel, and the bottom-right corner to resize
-it. Settings are saved per character.
+it. Settings are saved per character; the dungeon quests and mob levels
+learned in play are saved for the account, so an alt starts with them.
 
 ## Installation
 
