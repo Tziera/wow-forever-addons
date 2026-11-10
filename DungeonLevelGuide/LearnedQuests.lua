@@ -6,6 +6,7 @@
 local _, ns = ...
 
 ns.LEARNED_QUESTS = {
+    [92489] = { dungeon = "City of Dalaran", title = "Power Overwhelming", level = 33, giver = "High Sorcerer Andromath", zone = "Stormwind City", mapID = 1453, x = 49, y = 87.8, side = "A" },
     [96988] = { dungeon = "City of Dalaran", title = "Source of Power", level = 33, giver = "Doctor Martin Felben", zone = "Undercity", mapID = 1458, x = 46.9, y = 74.2, side = "H" },
     [2841] = { dungeon = "Gnomeregan", title = "Rig Wars", level = 35, giver = "Nogg", zone = "Orgrimmar", mapID = 1454, x = 75.9, y = 25.2, side = "H" },
     [2928] = { dungeon = "Gnomeregan", title = "Gyrodrillmatic Excavationators", level = 30, giver = "Shoni the Shilent", zone = "Stormwind City", mapID = 1453, x = 62.5, y = 34.1, side = "A" },
