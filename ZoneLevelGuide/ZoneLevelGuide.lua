@@ -1765,6 +1765,10 @@ frame:SetPoint("CENTER")
 frame:SetMovable(true)
 frame:SetResizable(true)
 frame:SetFrameStrata("MEDIUM")
+-- Above the invisible model scenes of Blizzard's widget containers (level 121
+-- seen), which take the clicks over the rows. Set before the children are
+-- made, so they are built on top of it.
+frame:SetFrameLevel(300)
 frame:SetClampedToScreen(true)
 if frame.SetResizeBounds then
     frame:SetResizeBounds(200, 160, 500, 700)
