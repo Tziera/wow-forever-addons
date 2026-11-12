@@ -126,6 +126,7 @@ quests that start in each zone: where, from whom, and at what level.
 | `/zlg style <name>` | `warm`, `flat`, `blizzard`, `elvui`, `details`, `pfui` or `minimal` |
 | `/zlg font <n>` / `/zlg alpha <n>` | Text size and background opacity |
 | `/zlg reset` | Put the panel back in its default position and size |
+| `/zlg position [name]` | Take the panel's position and size from another character on this account, by name or the start of one; without a name it lists them. The options page has the same as *Take position and size from*. Nothing is taken over unless you pick it. A character that took another's position is not offered to the others until you move or resize its panel yourself. |
 
 Drag the title bar to move the panel, and the bottom-right corner to resize
 it. Recorded quests and your answers about chains are saved for the account,

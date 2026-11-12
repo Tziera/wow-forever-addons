@@ -2,13 +2,13 @@
 ## Title: Turn-In Queue
 ## Notes: A turn-in queue: quests that are complete leave Blizzard's tracker and land here, under a header showing whether handing them all in is enough to level.
 ## Author: Tziera
-## Version: 1.0.0
+## Version: 1.1.0
 ## IconTexture: Interface\AddOns\TurnInQueue\icon
 ## X-License: GPL-3.0-or-later
 # Sacrificial first line: the beta client appears to drop whichever
 # SavedVariables directive comes first. TurnInQueueScratchDB is never touched
 # by the code -- it exists so the real one below is not the first.
-## SavedVariables: TurnInQueueScratchDB
+## SavedVariables: TurnInQueueScratchDB, TurnInQueueAccountDB
 ## SavedVariablesPerCharacter: TurnInQueueDB
 
 # Interface number derived from the client's 1.60.1 -- see README.md.

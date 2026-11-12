@@ -64,6 +64,7 @@ character. Remove the old `PendingQuestXP` folder from `Interface/AddOns`.
 | `/tiq font <n>` | Text size, 6–24 |
 | `/tiq alpha <n>` | Background opacity, 0–100 |
 | `/tiq reset` | Put the panel back in its default position and size |
+| `/tiq position [name]` | Take the panel's position and size from another character on this account, by name or the start of one; without a name it lists them. The options page has the same as *Take position and size from*. Nothing is taken over unless you pick it. A character that took another's position is not offered to the others until you move or resize its panel yourself. |
 | `/tiq colors` | Compare the addon's difficulty colours with the client's |
 | `/tiq debug` | Show which APIs the client is missing and the XP for each quest |
 | `/tiq layout` | Show how the panel measured its header |

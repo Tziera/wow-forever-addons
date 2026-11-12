@@ -56,6 +56,7 @@ to the map and the Group Finder.
 | `/dlg font <n>` | Text size, 6–24 |
 | `/dlg alpha <n>` | Background opacity, 0–100 |
 | `/dlg reset` | Put the panel back in its default position and size |
+| `/dlg position [name]` | Take the panel's position and size from another character on this account, by name or the start of one; without a name it lists them. The options page has the same as *Take position and size from*. Nothing is taken over unless you pick it. A character that took another's position is not offered to the others until you move or resize its panel yourself. |
 | `/dlg lfg` | Report what the client offers of the Group Finder API |
 | `/dlg levels` | Mob levels measured this session (elites only; non-elites, mostly the mobs' pets, are listed apart) |
 | `/dlg copy` | Reopen the last report in a box you can copy from |

@@ -983,16 +983,23 @@ end
 -- Always against the screen: a docked panel's own anchor is relative to the
 -- panel it hangs from, and RestoreFrame anchors to UIParent. Docking picks it
 -- up again after login, since it then stands edge to edge.
+-- Filled further down: the other characters' positions. One table rather
+-- than eight locals, and on ns, since the main chunk is at Lua's limit of
+-- 200 locals.
+ns.Layouts = {}
+
 local function SavePosition()
     local left, top = frame:GetLeft(), frame:GetTop()
     if not (left and top) then return end
     TurnInQueueDB.point = { point = "TOPLEFT", relativePoint = "BOTTOMLEFT", x = left, y = top }
+    ns.Layouts.Remember()
     frame.Collapse.Paint()
     frame.Collapse.HideBody()
 end
 
 local function SaveSize()
     TurnInQueueDB.size = { width = frame:GetWidth(), height = frame:GetHeight() }
+    ns.Layouts.Remember()
 end
 
 -- The client keeps its own memory of where you dragged a movable frame, in
@@ -1023,6 +1030,182 @@ local function RestoreFrame()
 
     if TurnInQueueDB.shown then frame:Show() else frame:Hide() end
     frame.Collapse.Apply()
+end
+
+-- ------------------------------------------------------------
+-- Positions from other characters
+--
+-- Each character's position and size is also kept in the account file, so
+-- another character can take them over from the options page or with
+-- /tiq position. Nothing is taken over unless you pick it.
+-- ------------------------------------------------------------
+
+function ns.Layouts.Say(text)
+    Msg(text)
+end
+
+function ns.Layouts.CharacterKey()
+    local name = UnitName and UnitName("player")
+    if not name or name == "" or name == UNKNOWNOBJECT then return nil end
+    local realm = GetRealmName and GetRealmName()
+    return (realm and realm ~= "") and (name .. "-" .. realm) or name
+end
+
+-- Forever gives every character a surname: "Tziera Rootmender".
+function ns.Layouts.FullName()
+    local name, surname
+    if UnitNameUnmodified then name, surname = UnitNameUnmodified("player") end
+    if type(name) ~= "string" or name == "" then name, surname = UnitName("player"), nil end
+    if type(surname) == "string" and surname ~= "" then return name .. " " .. surname end
+    return name
+end
+
+-- Moved or resized by hand: the position is this character's own again.
+function ns.Layouts.Own()
+    if TurnInQueueDB then TurnInQueueDB.layoutFrom = nil end
+end
+
+function ns.Layouts.Copy(t)
+    if type(t) ~= "table" then return nil end
+    local c = {}
+    for k, v in pairs(t) do c[k] = v end
+    return c
+end
+
+function ns.Layouts.Remember()
+    local db = TurnInQueueDB
+    -- A position taken from someone else is theirs, not this character's.
+    if not (db and db.point) or db.layoutFrom then return end
+    local key = ns.Layouts.CharacterKey()
+    if not key then return end
+    TurnInQueueAccountDB = TurnInQueueAccountDB or {}
+    TurnInQueueAccountDB.layouts = TurnInQueueAccountDB.layouts or {}
+    TurnInQueueAccountDB.layouts[key] = {
+        name = ns.Layouts.FullName(), point = ns.Layouts.Copy(db.point), size = ns.Layouts.Copy(db.size),
+        expandedHeight = db.expandedHeight,
+    }
+end
+
+-- The other characters with a saved position, by name.
+function ns.Layouts.Others()
+    local out = {}
+    local layouts = TurnInQueueAccountDB and TurnInQueueAccountDB.layouts or {}
+    local me = ns.Layouts.CharacterKey()
+    for key, layout in pairs(layouts) do
+        if key ~= me and type(layout) == "table" and layout.point then
+            out[#out + 1] = { key = key, name = layout.name or key }
+        end
+    end
+    table.sort(out, function(a, b) return a.name:lower() < b.name:lower() end)
+    return out
+end
+
+function ns.Layouts.Load(key)
+    local layout = TurnInQueueAccountDB and TurnInQueueAccountDB.layouts and TurnInQueueAccountDB.layouts[key]
+    if not (layout and layout.point) then return false end
+    local db = TurnInQueueDB
+    db.point = ns.Layouts.Copy(layout.point)
+    db.size = ns.Layouts.Copy(layout.size) or db.size
+    if layout.expandedHeight then db.expandedHeight = layout.expandedHeight end
+    db.layoutFrom = key
+    local me = ns.Layouts.CharacterKey()
+    if me then TurnInQueueAccountDB.layouts[me] = nil end
+    RestoreFrame()
+    ns.Layouts.Say(("position and size from %s."):format(layout.name or key))
+    return true
+end
+
+-- /tiq position [name]: a name, or the start of one, takes that position.
+function ns.Layouts.Command(arg)
+    local others = ns.Layouts.Others()
+    arg = (arg or ""):lower()
+    if arg ~= "" then
+        for _, o in ipairs(others) do
+            if o.name:lower():sub(1, #arg) == arg then return ns.Layouts.Load(o.key) end
+        end
+    end
+    if #others == 0 then
+        ns.Layouts.Say("no other character on this account has a saved position yet.")
+        return
+    end
+    local names = {}
+    for i, o in ipairs(others) do names[i] = o.name end
+    ns.Layouts.Say("/tiq position <name> takes the position from: " .. table.concat(names, ", ") .. ".")
+end
+
+-- A button that lists the other characters when clicked.
+function ns.Layouts.Dropdown(parent, onPick)
+    local width = 180
+    local dropdown = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    dropdown:SetSize(width, 20)
+    dropdown:SetText("Choose a character")
+    dropdown.arrow = dropdown:CreateTexture(nil, "OVERLAY")
+    dropdown.arrow:SetSize(12, 12)
+    dropdown.arrow:SetPoint("RIGHT", -6, -1)
+    dropdown.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+
+    local list = CreateFrame("Frame", nil, dropdown)
+    list:SetPoint("TOPLEFT", dropdown, "BOTTOMLEFT", 0, -2)
+    list:SetFrameStrata("FULLSCREEN_DIALOG")
+    list:EnableMouse(true)
+    local fill = list:CreateTexture(nil, "BACKGROUND")
+    fill:SetAllPoints()
+    fill:SetColorTexture(0.06, 0.06, 0.06, 0.96)
+    for _, edge in ipairs(MakeEdges(list, 0)) do edge:SetColorTexture(1, 1, 1, 0.25) end
+    list:Hide()
+    dropdown.list = list
+    list.items = {}
+
+    local function Item(i)
+        local item = list.items[i]
+        if item then return item end
+        item = CreateFrame("Button", nil, list)
+        item:SetSize(width - 8, 18)
+        item:SetPoint("TOPLEFT", 4, -4 - (i - 1) * 18)
+        local glow = item:CreateTexture(nil, "HIGHLIGHT")
+        glow:SetAllPoints()
+        glow:SetColorTexture(1, 1, 1, 0.12)
+        item.text = item:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        item.text:SetPoint("LEFT", 6, 0)
+        item:SetScript("OnClick", function(self)
+            list:Hide()
+            if self.key then onPick(self.key) end
+        end)
+        list.items[i] = item
+        return item
+    end
+
+    -- Filled when opened: a character saved since the page was built shows up.
+    function dropdown.Fill()
+        local others = ns.Layouts.Others()
+        local rows = math.max(1, #others)
+        for i = 1, rows do
+            local item, o = Item(i), others[i]
+            item.key = o and o.key or nil
+            item.text:SetText(o and o.name or "No other character yet")
+            item.text:SetTextColor(o and 0.9 or 0.5, o and 0.9 or 0.5, o and 0.9 or 0.5)
+            item:Show()
+        end
+        for i = rows + 1, #list.items do list.items[i]:Hide() end
+        list:SetSize(width, rows * 18 + 8)
+    end
+
+    dropdown:SetScript("OnClick", function()
+        if list:IsShown() then list:Hide() else dropdown.Fill(); list:Show() end
+    end)
+    dropdown:SetScript("OnHide", function() list:Hide() end)
+    return dropdown
+end
+
+-- The label and dropdown on the options page, below `anchor`.
+function ns.Layouts.Controls(page, anchor)
+    local label = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -14)
+    label:SetText("Take position and size from")
+    local dropdown = ns.Layouts.Dropdown(page, ns.Layouts.Load)
+    dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
+    page.layoutDropdown = dropdown
+    return label
 end
 
 -- ------------------------------------------------------------
@@ -1761,8 +1944,10 @@ local function BuildSettingsPage(page)
         Refresh()
     end)
 
+    local positionLabel = ns.Layouts.Controls(page, clear)
+
     local hint = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    hint:SetPoint("TOPLEFT", clear, "BOTTOMLEFT", 0, -10)
+    hint:SetPoint("TOPLEFT", positionLabel, "BOTTOMLEFT", 0, -18)
     hint:SetText("Settings are saved per character.")
 
     function page.refresh()
@@ -1999,6 +2184,7 @@ titleBar:SetScript("OnDragStop", function()
     -- Enrols the frame in the client's own layout memory, which is what
     -- actually survives a restart here.
     if frame.SetUserPlaced then frame:SetUserPlaced(true) end
+    ns.Layouts.Own()
     SavePosition()
 end)
 
@@ -2081,6 +2267,7 @@ resizeGrip:SetScript("OnMouseDown", function() Dock.BeginSize(frame, resizeGrip)
 resizeGrip:SetScript("OnMouseUp", function()
     Dock.EndSize(resizeGrip)
     if frame.SetUserPlaced then frame:SetUserPlaced(true) end
+    ns.Layouts.Own()
     SaveSize()
     Refresh()
 end)
@@ -2133,6 +2320,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         if loaded ~= ADDON_NAME then return end
         EnsureDB()
         RestoreFrame()
+        ns.Layouts.Remember()
         ApplyLook()
         RegisterSettingsPage()
     elseif event == "PLAYER_LOGIN" then
@@ -2431,6 +2619,9 @@ SlashCmdList["TURNINQUEUE"] = function(input)
             Msg(("usage: /tiq alpha <0-100>, currently %d."):format(
                 math.floor((TurnInQueueDB.bgAlpha or 0.75) * 100 + 0.5)))
         end
+
+    elseif cmd == "position" then
+        ns.Layouts.Command(arg)
 
     elseif cmd == "reset" then
         TurnInQueueDB.point = nil
