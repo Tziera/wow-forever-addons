@@ -134,6 +134,20 @@ local function PlainName(text)
     return text:lower()
 end
 
+-- Objectives often name the mob in plural: "Kobold Workers" for a
+-- "Kobold Worker", "Wolves" for a "Wolf".
+local function IsUnitObjective(name, unitName)
+    if not unitName then return false end
+    name, unitName = name:lower(), unitName:lower()
+    if name == unitName then return true end
+    local stem, last = unitName:match("^(.-)(%a?)$")
+    return name == unitName .. "s" or name == unitName .. "es"
+        or (last == "y" and name == stem .. "ies")
+        or (last == "f" and name == stem .. "ves")
+        or (unitName:sub(-2) == "fe" and name == unitName:sub(1, -3) .. "ves")
+        or (unitName:sub(-3) == "man" and name == unitName:sub(1, -4) .. "men")
+end
+
 local function ProgressText(unit)
     local mine, party = {}, {}
     local unitName = UnitName and UnitName(unit)
@@ -155,7 +169,7 @@ local function ProgressText(unit)
         elseif line.objective ~= false then
             local name, done, needed = ParseObjective(line.text)
             if name and done and needed and done < needed then
-                local text = name == unitName and own:format(done, needed)
+                local text = IsUnitObjective(name, unitName) and own:format(done, needed)
                     or ("%s %d/%d"):format(name, done, needed)
                 if not who then
                     table.insert(mine, text)
