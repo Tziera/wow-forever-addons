@@ -83,6 +83,10 @@ them), whether finds are posted in guild chat, and the minimap button.
 Guild posts say *Found a secret: <name>!* and only go out for finds the
 addon saw itself, not for marks made by hand.
 
+The page also says where to send reports: a step that does not tick off, a
+wrong spot, or a secret that is missing. Click the address
+(wowtziera@gmail.com) to get it in a box to copy; `/fst help` prints it too.
+
 ## Secret bosses as encounters
 
 Forever's client has no Encounter Journal tables (wago.tools has no

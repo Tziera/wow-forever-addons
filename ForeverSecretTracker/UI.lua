@@ -992,7 +992,7 @@ local function BuildCopyBox()
     top:SetColorTexture(0.8, 0.65, 0.1)
     local label = c:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     label:SetPoint("TOP", 0, -10)
-    label:SetText("Press Ctrl+C to copy the link")
+    c.label = label
     local box = Make("EditBox", "ForeverSecretTrackerCopyBox", c, "InputBoxTemplate")
     box:SetSize(320, 22)
     box:SetPoint("TOP", 0, -34)
@@ -1016,8 +1016,9 @@ local function BuildCopyBox()
     return c
 end
 
-function ns.ShowLink(url)
+function ns.ShowLink(url, label)
     copyBox = copyBox or BuildCopyBox()
+    copyBox.label:SetText(label or "Press Ctrl+C to copy the link")
     copyBox.url = url
     copyBox.box:SetText(url)
     copyBox:Show()
@@ -1225,6 +1226,24 @@ function ns.RegisterOptions()
         panel.boxes[#panel.boxes + 1] = box
         y = y - 36
     end
+
+    local contactHead = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    contactHead:SetPoint("TOPLEFT", 16, y - 12)
+    contactHead:SetText("Something wrong or missing?")
+    local contactText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    contactText:SetPoint("TOPLEFT", 16, y - 32)
+    contactText:SetWidth(560)
+    contactText:SetJustifyH("LEFT")
+    contactText:SetText("A step that does not tick off, a wrong spot, or a secret the addon does not have yet: "
+        .. "send a mail and it goes into the next version.")
+    local mail = CreateFrame("Button", nil, panel)
+    mail:SetPoint("TOPLEFT", 16, y - 56)
+    mail.text = mail:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    mail.text:SetPoint("LEFT")
+    mail.text:SetTextColor(0.45, 0.7, 1)
+    mail.text:SetText(ns.CONTACT .. " |cff808080(click to copy)|r")
+    mail:SetSize(mail.text:GetStringWidth() + 4, 18)
+    mail:SetScript("OnClick", function() ns.ShowLink(ns.CONTACT, "Press Ctrl+C to copy the address") end)
     panel:SetScript("OnShow", ns.RefreshOptions)
     optionsPage = panel
     if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then

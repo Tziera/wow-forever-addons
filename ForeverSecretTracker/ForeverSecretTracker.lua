@@ -9,6 +9,9 @@ local ADDON, ns = ...
 
 local MAX_LOG = 500
 
+-- Where reports of wrong or missing secrets go (options page, /fst help).
+ns.CONTACT = "wowtziera@gmail.com"
+
 local KIND_LABEL = {
     pet = "Pet", toy = "Toy", quest = "Quest", boss = "Boss / place", rare = "Rare",
     twist = "Twist", mystery = "Mystery",
@@ -557,6 +560,7 @@ local function Help()
     print("  /fst options -- open the options page")
     print("  /fst log [n] -- the last n quests, items, pets and kills it recorded")
     print("  /fst reset confirm -- forget every step marked by hand")
+    print("Something wrong or missing? Mail " .. ns.CONTACT .. " (also on the options page, to copy).")
 end
 
 SLASH_FOREVERSECRETTRACKER1 = "/fst"
