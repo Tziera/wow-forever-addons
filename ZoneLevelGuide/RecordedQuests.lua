@@ -21,6 +21,7 @@
 -- leadsTo = the quest this one sends you to, when that one does not need it;
 -- class = the classes that can take it, as the client's tokens ("DRUID", "WARRIOR PALADIN");
 -- races = the races that can take it, as UnitRace's tokens ("Dwarf Gnome"), when not the whole side;
+--   races = false: the whole side, checked in play or on Wowhead where Questie says otherwise.
 -- profession = the profession it takes, as the skill list names it ("Tailoring"),
 --   or false when checked in play that the title's profession is not needed.
 -- skill = the profession skill it is offered at, when Forever asks for less than Questie says.
@@ -1270,7 +1271,7 @@ ns.RECORDED_QUESTS = {
     [98389] = { title = "A Light in the Darkness", level = 4, zone = "Tirisfal Glades", mapID = 1420, x = 31, y = 66.3, giver = "Aramis Hammerhand", side = "H", races = "Scourge" },
     [6395] = { title = "Marla's Last Wish", level = 5, zone = "Tirisfal Glades", mapID = 1420, x = 30.9, y = 66.1, giver = "Novice Elreth", side = "H", after = 376, afterTitle = "The Damned" },
     [356] = { title = "Rear Guard Patrol", level = 11, zone = "Tirisfal Glades", mapID = 1420, x = 65.5, y = 60.2, giver = "Deathguard Linnea", side = "H" },
-    [99156] = { title = "Rear Guard Patrol", level = 13, zone = "Tirisfal Glades", mapID = 1420, x = 65.6, y = 60.2, giver = "Deathguard Linnea", side = "H", after = 356, afterTitle = "Rear Guard Patrol", races = "Orc Scourge" },
+    [99156] = { title = "Rear Guard Patrol", level = 13, zone = "Tirisfal Glades", mapID = 1420, x = 65.6, y = 60.2, giver = "Deathguard Linnea", side = "H", after = 356, afterTitle = "Rear Guard Patrol", races = false },
     [92422] = { title = "The Wrath of Rath'mael", level = 22, dungeon = true, zone = "Tirisfal Glades", mapID = 1420, x = 65.2, y = 60.2, giver = "Deathguard Kristof", side = "H", after = 356, afterTitle = "Rear Guard Patrol" },
     [1657] = { title = "Stinking Up Southshore", level = 60, zone = "Tirisfal Glades", mapID = 1420, x = 55.6, y = 69.8, giver = "Darkcaller Yanka", side = "H", holiday = "Hallow's End" },
     [5341] = { title = "Barov Family Fortune", level = 60, dungeon = true, zone = "Tirisfal Glades", mapID = 1420, x = 83, y = 72, giver = "Alexi Barov", side = "H", seeded = true },
