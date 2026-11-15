@@ -24,6 +24,7 @@ ns.MAP = MAP
 -- `credit` is one of these or a list of them; `what` names the part found.
 local SECRET_FINDING = { name = "WoW Secret Finding & Collections", url = "https://discord.gg/wowsecrets" }
 local KISSTA96 = { name = "Kissta96 on Reddit", url = "https://www.reddit.com/user/Kissta96/" }
+local SEVENTEEN_UNCLES = { name = "SeventeenUncles on the WoW Secret Finding Discord", url = "https://discord.gg/wowsecrets" }
 
 -- step(text, zone, x, y, check, extra): x and y may be nil for a step
 -- without a known spot. `check` is what tells the addon the step is done,
@@ -97,6 +98,24 @@ ns.SECRETS = {
             step("Get five more Fractured Insignias: buy them or trade with friends."),
             step("Combine the six insignias into the toy.", nil, nil, nil,
                 { itemName = { "Alcaz Operative Insignia", "Alcaz Operative Disguise" } }),
+        },
+    },
+
+    {
+        id = "travelers-symbols", icon = "INV_Misc_Note_05", kind = "toy", name = "Traveler's Symbols",
+        credit = SEVENTEEN_UNCLES,
+        level = 52, zone = "Blackrock Depths",
+        reward = "Traveler's Symbols (toy): a sign post others can see for an hour; also Premo's Poise-Demanding Uniform (shirt) and Student Fodder",
+        note = "Takes some parkour. The door on the ledge ports you above Lord Incendius, with no way back.",
+        done = { item = 221315, itemName = "Traveler's Symbols" },
+        steps = {
+            step("Take the bridge just east of the Ring of Law, north over the lava. Look down to the left: a friendly Dark Iron dwarf stands on a pillar base below."),
+            step("Clear the bridge (Blazing Fireguards and a group of Shadowforge dwarves)."),
+            step("By the small brazier on the left, get onto the railing, hug the rock wall and jump ahead onto the platform by the wall."),
+            step("Follow the platform to its end, still against the wall, and push hard into the rock corner."),
+            step("Turn your left shoulder to the wall and run carefully along it until you fall into the open corner, then drop to the rock outcrop below."),
+            step("On the ledge with the Rugged Traveler: take the toy, the shirt and the Student Fodder.", nil, nil, nil,
+                { item = 221315, itemName = "Traveler's Symbols" }),
         },
     },
 

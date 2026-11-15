@@ -145,6 +145,12 @@ Watchman's Torch is item 280612 (Wowhead Forever). The Alliance fragments
 are written "Mathystral Amulet Fragments" in the post; the guide calls them
 Mathystra after the ruins and checks no name for them.
 
+Traveler's Symbols is from Wowhead's guide (2026-11-14), which credits
+SeventeenUncles on the same Discord. Items: the toy 221315, Premo's
+Poise-Demanding Uniform 221316, Student Fodder 216619. The guide shows the
+ledge and the Rugged Traveler only in pictures, so the last step does not
+say exactly what to click.
+
 Wit's Edge has two credits: the weapon was first posted by
 [Kissta96 on Reddit](https://www.reddit.com/user/Kissta96/), the Scroll of
 Wit by the same Discord. A secret's `credit` can be one source or a list,
