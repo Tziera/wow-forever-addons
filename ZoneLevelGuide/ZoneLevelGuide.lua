@@ -426,8 +426,8 @@ local ZONES = {
     ["Un'Goro Crater"] = { mapID = 1449 },
     ["Silithus"] = { mapID = 1451 },
     ["Winterspring"] = { mapID = 1452 },
-    ["Riverglades"] = {},
-    ["Mount Hyjal"] = {},
+    ["Riverglades"] = { mapID = 2548 },
+    ["Mount Hyjal"] = { mapID = 2482 },
 
     -- Cities are not in the Group Finder, but a good share of quests start in
     -- them. They are listed for those quests alone, see CityRows.
@@ -468,6 +468,7 @@ local DEFAULTS = {
     range = DEFAULT_RANGE,      -- levels beyond a zone's own range, 0-15
     hideOtherSide = true,       -- hide the other faction's own zones
     hideDone = false,           -- hide recorded quests you have handed in
+    hideEmpty = false,          -- hide zones with no quest left to do
     hideHigh = false,           -- hide quests more than QUEST_WINDOW levels above you
     hideProfession = false,     -- hide quests for a profession you do not have
     hideAboveSkill = false,     -- hide profession quests above your skill (otherwise red, up to 10 above)
@@ -1308,6 +1309,9 @@ local function AllQuests()
         if (all[id] or {}).profession == false then merged.profession = nil end
         -- Tagged as a dungeon quest by the game, but done outside.
         if (all[id] or {}).dungeon == false then merged.dungeon = nil end
+        -- A chain noted in play, after a quest the file calls a breadcrumb to this one.
+        local before = q.after and all[q.after]
+        if before and before.leadsTo == id then merged.after, merged.afterTitle = nil, nil end
         all[id] = merged
     end
     -- A book no quest of your side hands in yet still shows, as handed in to
@@ -3269,6 +3273,15 @@ local function ShownZones(level)
     local range = ZoneLevelGuideDB.range or DEFAULT_RANGE
     local mine = PlayerSide()
     local shown = {}
+    -- A zone with nothing left to do: no quest the list would show that is
+    -- not handed in. Only left out with hideEmpty on.
+    local function NothingLeft(name, window)
+        if not ZoneLevelGuideDB.hideEmpty then return false end
+        for _, q in ipairs((QuestsIn(name, window, level))) do
+            if QuestStatus(q.id) ~= "done" and not ClosedForGood(q, q.id) then return false end
+        end
+        return true
+    end
     for _, zone in ipairs(finderZones) do
         local info = ZoneInfo(zone.name)
         local side = info and info.side
@@ -3276,9 +3289,11 @@ local function ShownZones(level)
         local inRange = level >= zone.minLevel - range and level <= zone.maxLevel + range
         -- A PvP zone is a place to fight, not to level: shown once it has a quest.
         local empty = info and info.pvp and not next(ZoneQuests(zone.name))
-        if inRange and not empty and not (otherSide and ZoneLevelGuideDB.hideOtherSide) then
+        local window = ZoneLevelGuideDB.hideHigh and { 0, level + QUEST_WINDOW + range } or nil
+        if inRange and not empty and not (otherSide and ZoneLevelGuideDB.hideOtherSide)
+            and not NothingLeft(zone.name, window) then
             table.insert(shown, { name = zone.name, minLevel = zone.minLevel, maxLevel = zone.maxLevel,
-                window = ZoneLevelGuideDB.hideHigh and { 0, level + QUEST_WINDOW + range } or nil })
+                window = window })
         end
     end
 
@@ -3295,9 +3310,9 @@ local function ShownZones(level)
                     high = math.max(high or q.level, q.level)
                 end
             end
-            if low and level >= low - range and level <= high + range then
-                table.insert(shown, { name = name, minLevel = low, maxLevel = high,
-                    window = ZoneLevelGuideDB.hideHigh and { 0, level + QUEST_WINDOW + range } or nil })
+            local window = ZoneLevelGuideDB.hideHigh and { 0, level + QUEST_WINDOW + range } or nil
+            if low and level >= low - range and level <= high + range and not NothingLeft(name, window) then
+                table.insert(shown, { name = name, minLevel = low, maxLevel = high, window = window })
             end
         end
     end
@@ -3799,17 +3814,18 @@ local function BuildSettingsPage(page)
     Checkbox("shown", "Show the zone list", -48)
     Checkbox("hideOtherSide", "Hide the other faction's own zones and quests", -74)
     Checkbox("hideDone", "Hide recorded quests you have handed in", -100)
-    Checkbox("hideHigh", "Hide quests more than 5 levels above you", -126)
-    Checkbox("hideProfession", "Hide quests for professions you don't have", -152)
-    Checkbox("hideAboveSkill", "Hide profession quests above your skill (otherwise red, up to 10 above)", -178)
-    Checkbox("hideChainSteps", "Hide chain steps until the quest before is done (always, without chain help)", -204)
-    Checkbox("chainHelp", "Help find quest chains: show every quest, and mark ones that may follow another", -230)
-    Checkbox("openMap", "Open the map when you click a zone or quest (can cause blocked-action errors)", -256)
+    Checkbox("hideEmpty", "Hide zones with no quests left for you", -126)
+    Checkbox("hideHigh", "Hide quests more than 5 levels above you", -152)
+    Checkbox("hideProfession", "Hide quests for professions you don't have", -178)
+    Checkbox("hideAboveSkill", "Hide profession quests above your skill (otherwise red, up to 10 above)", -204)
+    Checkbox("hideChainSteps", "Hide chain steps until the quest before is done (always, without chain help)", -230)
+    Checkbox("chainHelp", "Help find quest chains: show every quest, and mark ones that may follow another", -256)
+    Checkbox("openMap", "Open the map when you click a zone or quest (can cause blocked-action errors)", -282)
 
     local styleLabel = page:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    styleLabel:SetPoint("TOPLEFT", 14, -294)
+    styleLabel:SetPoint("TOPLEFT", 14, -320)
     styleLabel:SetText("Style")
-    page.styleDropdown = StyleDropdown(page, 58, -289, function(name)
+    page.styleDropdown = StyleDropdown(page, 58, -315, function(name)
         SetStyle(name)
         page.refresh()
     end)
@@ -3830,9 +3846,9 @@ local function BuildSettingsPage(page)
         plus:SetScript("OnClick", function() set(get() + step); page.refresh() end)
     end
 
-    Stepper("rangeLabel", -324, 1, function() return ZoneLevelGuideDB.range or DEFAULT_RANGE end, SetRange)
-    Stepper("fontLabel", -348, 1, FontSize, SetFontSize)
-    Stepper("alphaLabel", -372, 5, function() return (ZoneLevelGuideDB.bgAlpha or 0.75) * 100 end,
+    Stepper("rangeLabel", -350, 1, function() return ZoneLevelGuideDB.range or DEFAULT_RANGE end, SetRange)
+    Stepper("fontLabel", -374, 1, FontSize, SetFontSize)
+    Stepper("alphaLabel", -398, 5, function() return (ZoneLevelGuideDB.bgAlpha or 0.75) * 100 end,
         SetBackgroundAlpha)
 
     local positionLabel = ns.Layouts.Controls(page, page.alphaLabel)
@@ -4076,6 +4092,11 @@ SlashCmdList["ZONELEVELGUIDE"] = function(input)
         ZoneLevelGuideDB.openMap = not ZoneLevelGuideDB.openMap
         print(PREFIX .. (ZoneLevelGuideDB.openMap and "a click opens the map."
             or "a click only sets the pin; open the map yourself."))
+    elseif cmd == "empty" then
+        ZoneLevelGuideDB.hideEmpty = not ZoneLevelGuideDB.hideEmpty
+        RefreshList()
+        print(PREFIX .. (ZoneLevelGuideDB.hideEmpty and "hiding zones with no quests left for you."
+            or "showing every zone in range, with quests or not."))
     elseif cmd == "done" then
         ZoneLevelGuideDB.hideDone = not ZoneLevelGuideDB.hideDone
         RefreshList()
@@ -4137,6 +4158,7 @@ SlashCmdList["ZONELEVELGUIDE"] = function(input)
         print("  /zlg range <n>    - also show zones up to n levels beyond their range")
         print("  /zlg faction      - show or hide the other faction's own zones")
         print("  /zlg done         - show or hide recorded quests you have handed in")
+        print("  /zlg empty        - show or hide zones with no quests left for you")
         print("  /zlg map          - open the map on a click, or only set the pin")
         print("  /zlg high         - show or hide quests more than 5 levels above you")
         print("  /zlg profession   - show or hide quests for professions you don't have")

@@ -93,7 +93,8 @@ quests that start in each zone: where, from whom, and at what level.
   handed in, at most five levels above yours. Grey quests count only while
   "Low-Level Quests" is ticked in the minimap's tracking menu.
 - **Filters**, all off by default: `/zlg done` hides quests you have handed
-  in, or can never take again (otherwise they fade), `/zlg high` hides quests more than five levels
+  in, or can never take again (otherwise they fade), `/zlg empty` hides zones
+  with no quest left for you, `/zlg high` hides quests more than five levels
   above you, `/zlg profession` hides quests for a profession you don't
   have (otherwise they fade), and `/zlg steps` shows only the next step of
   each chain even with chain help on: a later step stays hidden until the one before it is handed in. If "Low-Level Quests" is unticked in the minimap's
@@ -114,6 +115,7 @@ quests that start in each zone: where, from whom, and at what level.
 | `/zlg range <n>` | Also show zones up to n levels outside their range |
 | `/zlg faction` | Show/hide the other faction's zones |
 | `/zlg done` | Show/hide quests you have handed in |
+| `/zlg empty` | Show/hide zones with no quests left for you |
 | `/zlg map` | Open the map on a click, or only set the pin (default) |
 | `/zlg high` | Show/hide quests more than 5 levels above you |
 | `/zlg profession` | Show/hide quests for professions you don't have |
