@@ -21,9 +21,13 @@ Shows your quest progress on the nameplates of the mobs you still need in
   objectives it counts towards; the addon reads that list for each plate.
 - A settings page under *Esc → Options → AddOns*.
 
-**Not in dungeons yet.** Inside dungeons the game keeps from addons what this
-one reads, so no progress shows there for now. Making it work in dungeons is
-a goal for a later version.
+**In dungeons** the game hides the tooltip text from addons, but lets them
+show it. So the objective lines go on the plate exactly as the tooltip has
+them ("Defias Pillager slain: 3/10"): not shortened, and finished ones too.
+The line types still say which lines are objectives. In a group, the first
+member the tooltip names under a quest is taken to be you, unless the game
+says the mob has nothing to do with your quests; the others show with
+`/qpp party on`.
 
 ## Commands
 

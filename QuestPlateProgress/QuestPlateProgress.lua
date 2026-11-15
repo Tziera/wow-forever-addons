@@ -148,30 +148,65 @@ local function IsUnitObjective(name, unitName)
         or (unitName:sub(-3) == "man" and name == unitName:sub(1, -4) .. "men")
 end
 
+-- Inside dungeons every line's text is secret: it can be shown but not read.
+-- The line types still say which lines are objectives, so those go on the
+-- plate as the tooltip has them, finished or not. Whose they are cannot be
+-- read either; the first member named under a quest is taken to be you,
+-- unless the game says the unit has nothing to do with your quests.
+-- Whether the unit belongs to one of your own quests: true, false, or nil
+-- when the game will not say (no API, or a secret answer).
+local function RelatedToYou(unit)
+    if C_QuestLog and C_QuestLog.UnitIsRelatedToActiveQuest then
+        local ok, related = pcall(C_QuestLog.UnitIsRelatedToActiveQuest, unit)
+        if ok and not IsSecret(related) and type(related) == "boolean" then return related end
+    end
+    if C_QuestLog and C_QuestLog.GetNumQuestLogEntries then
+        local ok, _, quests = pcall(C_QuestLog.GetNumQuestLogEntries)
+        if ok and not IsSecret(quests) and quests == 0 then return false end
+    end
+    return nil
+end
+
+local function Joined(list)
+    local text = list[1]
+    for i = 2, #list do text = text .. "\n" .. list[i] end
+    return text
+end
+
 local function ProgressText(unit)
     local mine, party = {}, {}
     local unitName = UnitName and UnitName(unit)
     if IsSecret(unitName) then unitName = nil end
     local me = PlainName(UnitName and UnitName("player"))
     local own = IsFriendly(unit) and "Talk %d/%d" or "Kill %d/%d"
-    local who
+    local yours, who, members = true, nil, 0
+    local related
     for _, line in ipairs(TooltipLines(unit)) do
         if line.type == QUEST_TITLE_LINE then
-            who = nil
+            yours, who, members = true, nil, 0
         elseif line.type == QUEST_PLAYER_LINE then
-            local name = PlainName(line.text)
-            -- Forever names you with your surname too: "Tziera Rootmender".
-            if name and me and (name == me or name:sub(1, #me + 1) == me .. " ") then
-                who = nil
+            members = members + 1
+            if IsSecret(line.text) then
+                if related == nil then related = RelatedToYou(unit) ~= false end
+                yours, who = members == 1 and related, line.text
             else
+                local name = PlainName(line.text)
+                -- Forever names you with your surname too: "Tziera Rootmender".
+                yours = name and me and (name == me or name:sub(1, #me + 1) == me .. " ") or false
                 who = name and line.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("%-.*$", "") or "?"
+            end
+        elseif line.objective == true and IsSecret(line.text) then
+            if yours then
+                table.insert(mine, line.text)
+            elseif QuestPlateProgressDB.showParty then
+                table.insert(party, PARTY_COLOR .. who .. ": " .. line.text .. "|r")
             end
         elseif line.objective ~= false then
             local name, done, needed = ParseObjective(line.text)
             if name and done and needed and done < needed then
                 local text = IsUnitObjective(name, unitName) and own:format(done, needed)
                     or ("%s %d/%d"):format(name, done, needed)
-                if not who then
+                if yours then
                     table.insert(mine, text)
                 elseif QuestPlateProgressDB.showParty then
                     table.insert(party, ("%s%s: %s|r"):format(PARTY_COLOR, who, text))
@@ -180,8 +215,8 @@ local function ProgressText(unit)
         end
     end
     for _, text in ipairs(party) do table.insert(mine, text) end
-    if #mine == 0 then return nil end
-    return table.concat(mine, "\n")
+    if #mine == 0 then return nil, 0 end
+    return Joined(mine), #mine
 end
 
 local function PlateFor(unit)
@@ -242,8 +277,9 @@ local function Update(unit)
     if not QuestPlateProgressDB.enabled then return Clear(unit) end
     local plate = PlateFor(unit)
     if not plate then return Clear(unit) end
-    local text = ProgressText(unit)
-    if not text then return Clear(unit) end
+    -- the count decides: a secret text cannot be tested
+    local text, count = ProgressText(unit)
+    if count == 0 then return Clear(unit) end
     local holder = Holder(plate)
     ApplyLook(holder)
     holder.text:SetText(text)
@@ -525,6 +561,42 @@ local function Describe(value)
     return (tostring(value):gsub("|", "||"))
 end
 
+local function Fields(value, depth)
+    if IsSecret(value) then return "<secret>" end
+    if type(value) ~= "table" then return Describe(value) end
+    if depth >= 3 then return "{...}" end
+    local keys = {}
+    for k in pairs(value) do
+        if type(value[k]) ~= "function" then table.insert(keys, k) end
+    end
+    table.sort(keys, function(a, b) return tostring(a) < tostring(b) end)
+    local parts = {}
+    for _, k in ipairs(keys) do
+        table.insert(parts, tostring(k) .. "=" .. Fields(value[k], depth + 1))
+    end
+    return "{" .. table.concat(parts, ", ") .. "}"
+end
+
+-- The quest log's own view of each objective, which may stay readable in
+-- dungeons where the tooltip does not.
+local function QuestLogState()
+    local out = {}
+    if not (GetNumQuestLogEntries and GetQuestLogTitle) then return out end
+    local ok, count = pcall(GetNumQuestLogEntries)
+    for i = 1, ok and tonumber(count) or 0 do
+        local okTitle, title, _, _, isHeader, _, isComplete, _, questID = pcall(GetQuestLogTitle, i)
+        if okTitle and not isHeader then
+            local line = ("%s id %s complete %s"):format(Describe(title), Describe(questID), Describe(isComplete))
+            if C_QuestLog and C_QuestLog.GetQuestObjectives and type(questID) == "number" then
+                local okObj, objectives = pcall(C_QuestLog.GetQuestObjectives, questID)
+                line = line .. " objectives " .. Fields(okObj and objectives or nil, 0)
+            end
+            table.insert(out, line)
+        end
+    end
+    return out
+end
+
 local function Debug(unit)
     local report = {}
     local function Add(fmt, ...) table.insert(report, string.format(fmt, ...)) end
@@ -549,7 +621,27 @@ local function Debug(unit)
         Add("line %d: type %s, text %s -> %s", i + 1, Describe(line.type), Describe(line.text),
             name and ("%s %s/%s"):format(name, tostring(done), tostring(needed)) or "no objective")
     end
-    Add("shown: %s", Describe(ProgressText(unit)))
+    -- Every field of every line, to find one that still tells a finished
+    -- objective apart where the text is hidden.
+    if C_TooltipInfo and C_TooltipInfo.GetUnit then
+        local ok, data = pcall(C_TooltipInfo.GetUnit, unit)
+        for i, line in ipairs(ok and data and data.lines or {}) do
+            Add("raw %d: %s", i, Fields(line, 0))
+        end
+    end
+    for _, entry in ipairs(QuestLogState()) do Add("log: %s", entry) end
+    local relatedAPI = C_QuestLog and C_QuestLog.UnitIsRelatedToActiveQuest
+    local okRelated, related = false, nil
+    if relatedAPI then okRelated, related = pcall(relatedAPI, unit) end
+    local okCount, _, quests = false, nil, nil
+    if C_QuestLog and C_QuestLog.GetNumQuestLogEntries then
+        okCount, _, quests = pcall(C_QuestLog.GetNumQuestLogEntries)
+    end
+    Add("related to your quests: API %s, answer %s; quests in log %s; taken as %s",
+        tostring(relatedAPI ~= nil), okRelated and Describe(related) or "error",
+        okCount and Describe(quests) or "?", tostring(RelatedToYou(unit)))
+    local shown, count = ProgressText(unit)
+    Add("shown: %s (%d lines)", Describe(shown), count)
     QuestPlateProgressDB.debug = report
     return report
 end

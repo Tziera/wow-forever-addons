@@ -806,10 +806,12 @@ local function EnsureDB()
             local have = into[name]
             if not have then into[name] = miss return end
             if have == miss then return end
-            have.mobs = (have.mobs or 0) + (miss.mobs or 0)
+            -- The character's copy is a snapshot of the account's, so adding
+            -- them up would double the counts at every login.
+            have.mobs = math.max(have.mobs or 0, miss.mobs or 0)
             have.unread = have.unread or {}
             for key, count in pairs(miss.unread or {}) do
-                have.unread[key] = (have.unread[key] or 0) + count
+                have.unread[key] = math.max(have.unread[key] or 0, count)
             end
         end
 
@@ -823,6 +825,14 @@ local function EnsureDB()
             account[key] = account[key] or {}
             for name, seen in pairs(db[key] or {}) do MergeRange(account[key], name, seen) end
             db[key] = account[key]
+        end
+        -- Version 2: counts from before the fix above had grown out of bounds.
+        local MOB_MISSES_VERSION = 2
+        if (account.mobMissesVersion or 1) < MOB_MISSES_VERSION then
+            account.mobMisses, account.mobMissesVersion = {}, MOB_MISSES_VERSION
+        end
+        if (db.mobMissesVersion or 1) < MOB_MISSES_VERSION then
+            db.mobMisses, db.mobMissesVersion = {}, MOB_MISSES_VERSION
         end
         account.mobMisses = account.mobMisses or {}
         for name, miss in pairs(db.mobMisses or {}) do MergeMisses(account.mobMisses, name, miss) end

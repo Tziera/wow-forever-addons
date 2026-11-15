@@ -240,10 +240,44 @@ local function Evaluate(secret)
 end
 
 local guildFailed = false
+local lootLinks = {}
+
+local function GameItemLink(item)
+    local getInfo = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+    if not (item and getInfo) then return nil end
+    local ok, _, link = pcall(getInfo, item)
+    if ok and type(link) == "string" and not Secret(link) and link:find("|Hitem:", 1, true) then return link end
+    return nil
+end
+
+-- The item a secret ends in, as a chat link: the one from the loot line if
+-- there was one, else the game's own. A pet counts by the item it is
+-- learned from, when that has the pet's name. Nil when it is no item, or
+-- the game does not know it yet.
+local function ItemLink(secret)
+    local done = secret.done or {}
+    local ids, names = {}, {}
+    for _, name in ipairs(List(done.itemName)) do names[#names + 1] = name end
+    for _, name in ipairs(List(done.pet)) do names[#names + 1] = name end
+    for _, id in ipairs(List(done.item)) do ids[#ids + 1] = id end
+    for _, name in ipairs(names) do
+        local id = db.looted[Norm(name)]
+        if type(id) == "number" then ids[#ids + 1] = id end
+    end
+    for _, id in ipairs(ids) do
+        local link = lootLinks[id] or GameItemLink(id)
+        if link then return link end
+    end
+    for _, name in ipairs(names) do
+        local link = GameItemLink(name)
+        if link then return link end
+    end
+    return nil
+end
 
 local function PostToGuild(secret)
     if not (db.guild and SendChatMessage and IsInGuild and IsInGuild()) then return end
-    local ok = pcall(SendChatMessage, "Found a secret: " .. secret.name .. "!", "GUILD")
+    local ok = pcall(SendChatMessage, "Found a secret: " .. (ItemLink(secret) or secret.name) .. "!", "GUILD")
     if not ok and not guildFailed then
         guildFailed = true
         Msg("the game did not let the addon post in guild chat.")
@@ -356,7 +390,8 @@ local function OnLootMessage(text)
         if text:sub(1, #prefix) == prefix then mine = true break end
     end
     if not mine then return end
-    local id, name = text:match("|Hitem:(%d+)[^|]*|h%[(.-)%]|h")
+    local link, id, name = text:match("(|c%x+|Hitem:(%d+)[^|]*|h%[(.-)%]|h|r)")
+    if not link then id, name = text:match("|Hitem:(%d+)[^|]*|h%[(.-)%]|h") end
     id = tonumber(id)
     if not (id and name) then return end
     local key = Norm(name)
@@ -371,6 +406,7 @@ local function OnLootMessage(text)
     if not (wanted or IsQuestItem(id)) then return end
     db.looted[key] = id
     db.lootedIDs[id] = name
+    if link then lootLinks[id] = link end
     Log("loot", id, name)
     Schedule()
 end
@@ -409,6 +445,8 @@ local function IndexData()
         for _, c in ipairs(checks) do
             for _, n in ipairs(List(c.kill)) do killNames[Norm(n)] = true end
             for _, n in ipairs(List(c.itemName)) do itemNames[Norm(n)] = true end
+            -- a pet is mostly an item first: its loot line gives the link
+            for _, n in ipairs(List(c.pet)) do itemNames[Norm(n)] = true end
         end
     end
 end

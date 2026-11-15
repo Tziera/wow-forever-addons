@@ -80,8 +80,9 @@ three rares).
 Under *Options > AddOns > Forever Secret Tracker*, or with the commands
 above: whether finds and waypoints are written in chat (only you see
 them), whether finds are posted in guild chat, and the minimap button.
-Guild posts say *Found a secret: <name>!* and only go out for finds the
-addon saw itself, not for marks made by hand.
+Guild posts say *Found a secret: <name>!*, with the item as a link when
+the find is an item (for a pet, the item it was learned from), and only go out for finds the addon saw itself, not
+for marks made by hand.
 
 The page also says where to send reports: a step that does not tick off, a
 wrong spot, or a secret that is missing. Click the address

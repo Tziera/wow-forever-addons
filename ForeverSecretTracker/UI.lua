@@ -1242,7 +1242,7 @@ function ns.RegisterOptions()
     mail.text:SetPoint("LEFT")
     mail.text:SetTextColor(0.45, 0.7, 1)
     mail.text:SetText(ns.CONTACT .. " |cff808080(click to copy)|r")
-    mail:SetSize(mail.text:GetStringWidth() + 4, 18)
+    mail:SetSize((mail.text:GetStringWidth() or 300) + 4, 18)
     mail:SetScript("OnClick", function() ns.ShowLink(ns.CONTACT, "Press Ctrl+C to copy the address") end)
     panel:SetScript("OnShow", ns.RefreshOptions)
     optionsPage = panel
