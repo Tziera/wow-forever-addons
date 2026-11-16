@@ -510,6 +510,11 @@ local DUNGEONS = {
 -- which settles exactly one more line. Everything left over, the Argent Dawn,
 -- the Barrens goblins, the NPCs standing inside the instances, really is open
 -- to both, so an untagged quest is never hidden from anyone.
+--
+-- City of Dalaran and Excavation Site come from QuestieDB's Forever export,
+-- where they have areaIDs of their own (16544, 16732), so those lists are
+-- whole. The Drowned City has none there; its quests are the ones whose text
+-- names it. Forever's own quests for the old dungeons were added the same way.
 -- ------------------------------------------------------------
 local DUNGEON_QUESTS = {
     ["Blackfathom Deeps"] = {
@@ -569,6 +574,17 @@ local DUNGEON_QUESTS = {
         { id = 4004, name = "The Princess Saved?", faction = "H", giver = "Princess Moira Bronzebeard", chain = "Disharmony of Flame", chainID = 3906, chainGiver = "Thunderheart", chainWhere = "Badlands", chainX = 3, chainY = 48, chainMapID = 1418 },
         { id = 7604, name = "A Binding Contract" },
         { id = 9015, name = "The Challenge", giver = "Falrin Treeshaper", chain = "An Earnest Proposition", chainID = 8905, chainGiver = "Deliana", chainWhere = "Ironforge", chainX = 44, chainY = 53, chainMapID = 1455 },
+        { id = 97197, name = "Fragment of the Firelands", faction = "H", giver = "Alaana Stormwalker", where = "Mulgore", x = 33, y = 23, mapID = 1412 },
+    },
+    ["City of Dalaran"] = {
+        { id = 92489, name = "Power Overwhelming", faction = "A", giver = "High Sorcerer Andromath", where = "Stormwind City", x = 49, y = 88, mapID = 1453 },
+        { id = 92456, name = "A Green Sample", faction = "A", giver = "Shylamiir", where = "Stormwind City", x = 32, y = 63, mapID = 1453 },
+        { id = 92457, name = "Starving Arcane", faction = "A", giver = "Image of Archmage Modera", where = "Silverpine Forest", x = 69, y = 45, mapID = 1421, chain = "An Alarming Request", chainID = 92432, chainGiver = "Emissary Jacques", chainWhere = "Hillsbrad Foothills", chainX = 48, chainY = 60, chainMapID = 1424 },
+        { id = 92458, name = "Heart of Disruption", faction = "A", giver = "Image of Archmage Modera", where = "Silverpine Forest", x = 69, y = 45, mapID = 1421, chain = "An Alarming Request", chainID = 92432, chainGiver = "Emissary Jacques", chainWhere = "Hillsbrad Foothills", chainX = 48, chainY = 60, chainMapID = 1424 },
+        { id = 96988, name = "Source of Power", faction = "H", giver = "Doctor Martin Felben", where = "Undercity", x = 47, y = 74, mapID = 1458 },
+        { id = 96986, name = "The Grave Knight", faction = "H", giver = "Melisara", where = "Hillsbrad Foothills", x = 63, y = 21, mapID = 1424 },
+        { id = 96984, name = "Heart of Disruption", faction = "H", giver = "Image of Archmage Modera", where = "Silverpine Forest", x = 69, y = 45, mapID = 1421, chain = "Prison Break In", chainID = 544, chainGiver = "Magus Wordeen Voidglare", chainWhere = "Hillsbrad Foothills", chainX = 62, chainY = 21, chainMapID = 1424 },
+        { id = 96987, name = "Opportunistic Education", faction = "H", giver = "Rexxie Copperclutch", note = "Rexxie Copperclutch stands near the sewer entrance to Dalaran, in Alterac Mountains." },
     },
     ["Deadmines"] = {
         { id = 214, name = "Red Silk Bandanas", faction = "A", giver = "Scout Riell", where = "Westfall", x = 57, y = 47, mapID = 1436, chain = "The Defias Brotherhood", chainID = 65, chainGiver = "Gryan Stoutmantle", chainWhere = "Westfall", chainX = 56, chainY = 48, chainMapID = 1436 },
@@ -578,6 +594,20 @@ local DUNGEON_QUESTS = {
         { id = 166, name = "The Defias Brotherhood", faction = "A", giver = "Gryan Stoutmantle", where = "Westfall", x = 56, y = 48, mapID = 1436, chain = "The Defias Brotherhood", chainID = 65, chainGiver = "Gryan Stoutmantle", chainWhere = "Westfall", chainX = 56, chainY = 48, chainMapID = 1436 },
         { id = 92753, name = "Destruction in Deadmines", faction = "A", giver = "Alba Fairmoon", where = "Westfall", x = 53, y = 53, mapID = 1436, chain = "Murloc Gills and Testing the Wells", chainID = 92744, chainGiver = "Alba Fairmoon", chainWhere = "Westfall", chainX = 53, chainY = 53, chainMapID = 1436, note = "Plant the Extra-Destructive Explosives at the forge hidden inside, then meet Alba Fairmoon at the exit." },
         { id = 373, name = "The Unsent Letter", faction = "A", inside = true, fromDrop = true, note = "Edwin VanCleef drops the letter. It opens a long Stormwind chain." },
+    },
+    ["Excavation Site: Wetlands"] = {
+        { id = 95647, name = "Lost in the Thicket Things", faction = "A", giver = "Caitlin Grassman", where = "Wetlands", x = 12, y = 59, mapID = 1437 },
+        { id = 95809, name = "Heartwoven", faction = "A", inside = true, chain = "Lost in the Thicket Things", chainID = 95647, chainGiver = "Caitlin Grassman", chainWhere = "Wetlands", chainX = 12, chainY = 59, chainMapID = 1437, note = "Follows Lost in the Thicket Things inside; handed in to Caitlin Grassman in Menethil Harbor." },
+        { id = 95772, name = "Songblade Search", faction = "A", giver = "Dorin Songblade", where = "Redridge Mountains", x = 26, y = 47, mapID = 1433 },
+        { id = 95795, name = "Fallen in the Fen", faction = "A", inside = true, chain = "Songblade Search", chainID = 95772, chainGiver = "Dorin Songblade", chainWhere = "Redridge Mountains", chainX = 26, chainY = 47, chainMapID = 1433, note = "Follows Songblade Search inside; handed in to Dorin Songblade in Redridge." },
+        { id = 95646, name = "Horrors in the Highland", faction = "A", giver = "Rethiel the Greenwarden", where = "Wetlands", x = 56, y = 40, mapID = 1437, chain = "Tramping Paws", chainID = 276, chainGiver = "Rethiel the Greenwarden", chainWhere = "Wetlands", chainX = 56, chainY = 40, chainMapID = 1437 },
+        { id = 98815, name = "Highland Hides", faction = "A", giver = "James Halloran", where = "Wetlands", x = 9, y = 56, mapID = 1437, chain = "Young Crocolisk Skins", chainID = 484, chainGiver = "James Halloran", chainWhere = "Wetlands", chainX = 9, chainY = 56, chainMapID = 1437 },
+        { id = 95810, name = "Lost Relic Carry", faction = "A", inside = true, fromDrop = true, note = "A Titan Relic drops inside and starts it. Prospector Whelgar in the Wetlands takes it and gives Prehistoric Prism." },
+        { id = 98824, name = "Prehistoric Prism", faction = "A", giver = "Prospector Whelgar", where = "Wetlands", x = 39, y = 52, mapID = 1437, chain = "Lost Relic Carry", chainID = 95810 },
+        { id = 95682, name = "Open the Maw", faction = "H", giver = "Deathstalker Agent", where = "Wetlands", x = 52, y = 59, mapID = 1437, chain = "Dragonmaw Rumors", chainID = 95663, chainGiver = "Zaruk", chainWhere = "Arathi Highlands", chainX = 75, chainY = 36, chainMapID = 1417 },
+        { id = 95697, name = "Changing Tastes", faction = "H", giver = "Borstan", where = "Orgrimmar", x = 57, y = 53, mapID = 1454 },
+        { id = 95664, name = "Elder Knowledge", faction = "H", inside = true, fromDrop = true, note = "A Titan Relic drops inside and starts it. It leads to Earthen Echo from Bashana Runetotem in Thunder Bluff." },
+        { id = 98823, name = "Earthen Echo", faction = "H", giver = "Bashana Runetotem", where = "Thunder Bluff", x = 71, y = 34, mapID = 1456, chain = "Elder Knowledge", chainID = 95664 },
     },
     ["Gnomeregan"] = {
         { id = 2929, name = "The Grand Betrayal", faction = "A", giver = "High Tinker Mekkatorque", where = "Ironforge", x = 69, y = 49, mapID = 1455 },
@@ -601,6 +631,7 @@ local DUNGEON_QUESTS = {
         { id = 7064, name = "Corruption of Earth and Seed", faction = "H", giver = "Selendra", where = "Desolace", x = 27, y = 78, mapID = 1443 },
         { id = 7065, name = "Corruption of Earth and Seed", faction = "A", giver = "Keeper Marandis", where = "Desolace", x = 64, y = 11, mapID = 1443 },
         { id = 7066, name = "Seed of Life", giver = "Zaetar's Spirit" },
+        { id = 96776, name = "An'she's Radiance", faction = "H", giver = "Olana Brighthoof", where = "Mulgore", x = 33, y = 24, mapID = 1412 },
     },
     ["Ragefire Chasm"] = {
         { id = 5723, name = "Testing an Enemy's Strength", faction = "H", giver = "Rahauro", where = "Thunder Bluff", x = 70, y = 30, mapID = 1456 },
@@ -618,6 +649,8 @@ local DUNGEON_QUESTS = {
         { id = 3525, name = "Extinguishing the Idol", giver = "Belnistrasz", chain = "Scourge of the Downs", chainID = 3523, chainGiver = "Belnistrasz" },
         { id = 3341, name = "Bring the End", faction = "H", giver = "Andrew Brownell", where = "Undercity", x = 74, y = 33, mapID = 1458 },
         { id = 3636, name = "Bring the Light", faction = "A", giver = "Archbishop Benedictus", where = "Stormwind City", x = 40, y = 27, mapID = 1453 },
+        { id = 96773, name = "The Coldbringer's Eye", faction = "A", giver = "Archmage Lan'dalock", where = "Alterac Mountains", x = 15, y = 74, mapID = 1416 },
+        { id = 97196, name = "The Coldbringer's Eye", faction = "H", giver = "Sutara Plainstalker", where = "Mulgore", x = 35, y = 23, mapID = 1412 },
     },
     ["Razorfen Kraul"] = {
         { id = 1144, name = "Willix the Importer", giver = "Willix the Importer" },
@@ -643,6 +676,7 @@ local DUNGEON_QUESTS = {
         { id = 1050, name = "Mythology of the Titans", faction = "A", giver = "Librarian Mae Paledust", where = "Ironforge", x = 75, y = 12, mapID = 1455 },
         { id = 1053, name = "In the Name of the Light", faction = "A", giver = "Raleigh the Devout", where = "Hillsbrad Foothills", x = 52, y = 58, mapID = 1424, chain = "Down the Scarlet Path", chainID = 261, chainGiver = "Brother Anton", chainWhere = "Desolace", chainX = 66, chainY = 8, chainMapID = 1443 },
         { id = 1048, name = "Into The Scarlet Monastery", faction = "H", giver = "Varimathras", where = "Undercity", x = 56, y = 92, mapID = 1458 },
+        { id = 96800, name = "Past Due", faction = "A", giver = "Magus Olvek", where = "Alterac Mountains", x = 10, y = 62, mapID = 1416 },
     },
     ["Scholomance"] = {
         { id = 5529, name = "Plagued Hatchlings", giver = "Betina Bigglezink", where = "Eastern Plaguelands", x = 82, y = 60, mapID = 1423 },
@@ -692,6 +726,16 @@ local DUNGEON_QUESTS = {
         { id = 8968, name = "The Left Piece of Lord Valthalak's Amulet", giver = "Bodley", where = "Eastern Kingdoms - the continent map", x = 49, y = 64, mapID = 1415, chain = "An Earnest Proposition", chainID = 8905, chainGiver = "Deliana", chainWhere = "Ironforge", chainX = 44, chainY = 53, chainMapID = 1455 },
         { id = 8991, name = "The Right Piece of Lord Valthalak's Amulet", giver = "Bodley", where = "Eastern Kingdoms - the continent map", x = 49, y = 64, mapID = 1415, chain = "An Earnest Proposition", chainID = 8905, chainGiver = "Deliana", chainWhere = "Ironforge", chainX = 44, chainY = 53, chainMapID = 1455 },
     },
+    ["The Drowned City"] = {
+        { id = 95775, name = "The Drowned City", faction = "H", giver = "Kin'weelay", where = "Stranglethorn Vale", x = 32, y = 28, mapID = 1434, chain = "The Vile Reef", chainID = 629, chainGiver = "Kin'weelay", chainWhere = "Stranglethorn Vale", chainX = 32, chainY = 28, chainMapID = 1434 },
+        { id = 95776, name = "The Only Good Brinescale...", faction = "H", giver = "Commander Aggro'gosh", where = "Stranglethorn Vale", x = 32, y = 29, mapID = 1434, chain = "The Vile Reef", chainID = 629, chainGiver = "Kin'weelay", chainWhere = "Stranglethorn Vale", chainX = 32, chainY = 28, chainMapID = 1434, note = "Needs both Locating the Lost City and Enemies in the Water first." },
+        { id = 96774, name = "Ancient Gurubashi Idol", faction = "H", giver = "Mazu'kon", where = "Mulgore", x = 33, y = 21, mapID = 1412 },
+        { id = 95787, name = "Take Two With Water", faction = "A", giver = "Loremaster Dibbs", where = "Hillsbrad Foothills", x = 51, y = 57, mapID = 1424, chain = "Kurzen's Mystery", chainID = 207, chainGiver = "Brother Nimetz", chainWhere = "Stranglethorn Vale", chainX = 38, chainY = 4, chainMapID = 1434, note = "Kurzen's Mystery needs The Second Rebellion and Bad Medicine from the Rebel Camp first." },
+        { id = 95788, name = "Magics of the Drowned City", faction = "A", giver = "Loremaster Dibbs", where = "Hillsbrad Foothills", x = 51, y = 57, mapID = 1424, chain = "Kurzen's Mystery", chainID = 207, chainGiver = "Brother Nimetz", chainWhere = "Stranglethorn Vale", chainX = 38, chainY = 4, chainMapID = 1434, note = "Kurzen's Mystery needs The Second Rebellion and Bad Medicine from the Rebel Camp first." },
+        { id = 97130, name = "Ancient Gurubashi Secrets", faction = "A", giver = "Archmage Timear", where = "Alterac Mountains", x = 15, y = 74, mapID = 1416 },
+        { id = 95789, name = "Shady Saltseers", giver = "Krazek", where = "Stranglethorn Vale", x = 27, y = 77, mapID = 1434 },
+        { id = 95791, name = "The Saltseer Captain", giver = "Krazek", where = "Stranglethorn Vale", x = 27, y = 77, mapID = 1434 },
+    },
     ["Uldaman"] = {
         { id = 2398, name = "The Lost Dwarves", faction = "A", giver = "Prospector Stormpike", where = "Ironforge", x = 75, y = 12, mapID = 1455 },
         { id = 2284, name = "Necklace Recovery, Take 2", faction = "H", giver = "Dran Droffers", where = "Orgrimmar", x = 60, y = 37, mapID = 1454, chain = "Necklace Recovery", chainID = 2283, chainGiver = "Dran Droffers", chainWhere = "Orgrimmar", chainX = 60, chainY = 37, chainMapID = 1454 },
@@ -707,6 +751,10 @@ local DUNGEON_QUESTS = {
         { id = 6981, name = "The Glowing Shard" },
         { id = 3366, name = "The Glowing Shard", inside = true, fromDrop = true },
     },
+    ["Zul'Farak"] = {
+        { id = 96770, name = "The Witch Doctor's Head", faction = "A", giver = "Archmage Lan'dalock", where = "Alterac Mountains", x = 15, y = 74, mapID = 1416 },
+        { id = 96775, name = "Zum'rah's Head", faction = "H", giver = "Mazu'kon", where = "Mulgore", x = 33, y = 21, mapID = 1412 },
+    },
 }
 
 local PARTIAL_QUESTS = {
@@ -721,8 +769,6 @@ local PARTIAL_QUESTS = {
     ["Lower Blackrock Spire"] = true,
     ["Upper Blackrock Spire"] = true,
     ["Ruins of Lordaeron"] = true,
-    ["Excavation Site: Wetlands"] = true,
-    ["City of Dalaran"] = true,
     ["The Drowned City"] = true,
     ["Krol'dok Stronghold"] = true,
     ["Alcaz Prison"] = true,
